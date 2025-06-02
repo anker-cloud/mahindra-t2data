@@ -14,9 +14,9 @@
 
 MODEL="gemini-2.5-pro-preview-03-25" # Identifier for the specific generative model to be used by the agent. (e.g., "gemini-2.5-pro-preview-03-25")
 # MODEL="gemini-2.5-flash-preview-04-17"
-PROJECT_ID="pawan-argolis-demo" # The Google Cloud Project ID that contains the BigQuery datasets and tables to be analyzed. (e.g., "my-gcp-project-123")
+PROJECT_ID="" # The Google Cloud Project ID that contains the BigQuery datasets and tables to be analyzed. (e.g., "my-gcp-project-123")
 LOCATION="asia-south1" # The geographical location of the BigQuery datasets and tables to be analyzed (e.g., "US", "asia-northeast3")
 DATASET_NAME="thelook_ecommerce" # The target BigQuery dataset name to be analyzed or for which data profiles are fetched. (e.g., "sales_data")
 TABLE_NAMES=[] # Optional list of specific table names within DATASET_NAME. If empty, operations might apply to all tables in the dataset. (e.g., ["orders", "customers"] or [])
-DATA_PROFILES_TABLE_FULL_ID="pawan-argolis-demo.thelook_ecommerce_data_profile.all_profiles" # Optional: Full BigQuery table ID where data profiling results are stored. Set to None or an empty string if not used. (e.g., "my_project.profiling_dataset.all_profiles", None, "")
+DATA_PROFILES_TABLE_FULL_ID="" # Optional: Full BigQuery table ID where data profiling results are stored. Set to None or an empty string if not used. (e.g., "my_project.profiling_dataset.all_profiles", None, "")
 

@@ -1,4 +1,4 @@
-# Telco Big Data Agent
+# Retail Big Data Agent
 ![](frontend/src/assets/archi.png)
 This project is a data agent application with a React frontend and a Python backend. The agent leverages custom tools to interact with data and provide insights.
 
@@ -49,9 +49,9 @@ This project is designed to provide a user interface for interacting with a data
     MODEL="gemini-2.5-pro-preview-03-25"
     PROJECT_ID=""
     LOCATION=""
-    DATASET_NAME="cymbal_telco_dataset"
+    DATASET_NAME=""
     TABLE_NAME=""
-    DATA_PROFILES_TABLE_FULL_ID="cymbal-telco-da.telco_dataset_data_profile.data_profile"
+    DATA_PROFILES_TABLE_FULL_ID=""
     ```
 * **Metadata Enrichment**:
     To enhance the agent's understanding and grounding capabilities, it is highly recommended to enrich your BigQuery metadata:
@@ -118,7 +118,7 @@ Before you begin, ensure you have the following installed:
 *   **Google Cloud SDK:** Ensure `gcloud` is installed and authenticated (`gcloud auth login`).
 *   **Permissions:** Your authenticated user or service account needs permissions to use Cloud Build, Artifact Registry, and Cloud Run within your GCP project.
 *   **APIs Enabled:** Ensure the Cloud Build API, Artifact Registry API, and Cloud Run Admin API are enabled in your GCP project.
-*   **Artifact Registry Repository:** Ensure the Artifact Registry repository specified in `scripts/deploy.sh` (default: `telco-da-repo` in `us-central1`) exists in your project.
+*   **Artifact Registry Repository:** Ensure the Artifact Registry repository specified in `scripts/deploy.sh`  exists in your project.
 
 ### Project Setup
 
@@ -194,9 +194,9 @@ Before deploying, ensure you have the following:
     *   Push and pull images from Artifact Registry.
     *   Deploy services to Cloud Run.
     *   A common approach is to grant roles like `Cloud Build Editor`, `Artifact Registry Administrator`, and `Cloud Run Developer` or more granular permissions as per your organization's security policies.
-4.  **Artifact Registry Repository:** Ensure the Artifact Registry repository specified in `scripts/deploy.sh` (default: `telco-da-repo` in `us-central1`) exists in your project. Create it if it doesn't:
+4.  **Artifact Registry Repository:** Ensure the Artifact Registry repository specified in `scripts/deploy.sh`  exists in your project. Create it if it doesn't:
     ```bash
-    gcloud artifacts repositories create telco-da-repo \
+    gcloud artifacts repositories create <AR Repo Name> \
         --repository-format=docker \
         --location=us-central1 \
         --description="Docker repository for Data Agent"
@@ -214,7 +214,7 @@ This script automates the process of building the Docker image using Cloud Build
         ```bash
         # scripts/init.sh
         # Your project name. It acts as a unique identifier.
-        export PROJECT_NAME=cymbal-telco-da # Optional, can be changed
+        export PROJECT_NAME= # Optional, can be changed
         # Your GCP Project ID
         export PROJECT_ID=your-gcp-project-id-here # <-- UPDATE THIS LINE
         ```
@@ -230,7 +230,7 @@ This script automates the process of building the Docker image using Cloud Build
     * The script will:
         *   Source the `PROJECT_ID` from `init.sh`.
         *   Submit a build to Google Cloud Build using `cloudbuild.yaml`.
-        *   Deploy the built image from Artifact Registry to the corresponding Cloud Run service (`telco-da-app`).
+        *   Deploy the built image from Artifact Registry to the corresponding Cloud Run service .
         *   Output the URL of the deployed service upon success.
 
 You will need appropriate GCP permissions and configuration (Project ID, Artifact Registry).
@@ -411,4 +411,4 @@ Here's how different types of metadata contribute:
 
 **Integration via Prompting:**
 
-The fetched DDLs, data profiles, and sample data are dynamically formatted and injected into specific sections of the agent's master prompt (defined in [`data_agent/instructions.yaml`](data_agent/instructions.yaml) and assembled by [`data_agent/instructions.py`](data_agent/instructions.py)). This structured metadata, combined with explicit instructions on how to use it (including workflow steps for clarification and few-shot examples), effectively engineers the prompt to guide the LLM. This comprehensive context significantly improves the agent's ability to understand the nuances of the user's request within the specific constraints and characteristics of the Telco BigQuery dataset, leading to far more accurate and reliable NL2SQL generation.
+The fetched DDLs, data profiles, and sample data are dynamically formatted and injected into specific sections of the agent's master prompt (defined in [`data_agent/instructions.yaml`](data_agent/instructions.yaml) and assembled by [`data_agent/instructions.py`](data_agent/instructions.py)). This structured metadata, combined with explicit instructions on how to use it (including workflow steps for clarification and few-shot examples), effectively engineers the prompt to guide the LLM. This comprehensive context significantly improves the agent's ability to understand the nuances of the user's request within the specific constraints and characteristics of the BigQuery dataset, leading to far more accurate and reliable NL2SQL generation.
