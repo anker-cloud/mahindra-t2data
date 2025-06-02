@@ -1,0 +1,320 @@
+/* frontend/src/components/DataPreview/DataPreview.css - REVAMPED */
+
+.data-preview-page {
+  /* font-family is inherited from body */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+/* .page-header styles are now global in App.css */
+
+.cards-container {
+  display: grid; /* Using grid for better responsiveness */
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Responsive columns */
+  gap: 24px; /* Consistent gap */
+  margin-bottom: 32px;
+}
+
+.data-card {
+  background-color: var(--background-content); /* Keep background white */
+  color: var(--text-primary); /* Default text color */
+  border: 1px solid var(--border-secondary); /* Revert to subtle border */
+  border-radius: var(--border-radius-md); /* Slightly less rounded */
+  padding: 16px; /* Reduced padding for smaller size */
+  box-shadow: var(--shadow-md); /* Defined shadow */
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; /* Add border-color transition */
+  display: flex; /* For better internal alignment */
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; /* For pseudo-elements or image backgrounds */
+}
+
+.data-card:hover {
+  border-color: var(--primary-brand); /* Primary brand border on hover */
+  background-color: var(--background-content); /* Keep background white on hover */
+  color: var(--primary-brand); /* Primary brand color on hover */
+}
+/* Optional: Add a subtle top border accent */
+.data-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background-color: var(--primary-brand); /* Default accent */
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.data-card:hover::before {
+    opacity: 0.7;
+}
+/* Specific card accents - add classes like .accent-green to your card elements */
+.data-card.accent-green::before { background-color: var(--accent-color); }
+.data-card.accent-yellow::before { background-color: var(--warning-color); }
+.data-card.accent-red::before { background-color: var(--danger-color); }
+
+
+.data-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.data-card .card-header { /* Optional: if you want a distinct header section in card */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.data-card .card-header svg { /* Icon in card header */
+    width: 24px;
+    height: 24px;
+    fill: var(--primary-brand-light);
+}
+
+.data-card h3 { /* Title of the card */
+  font-size: 0.9rem; /* Slightly smaller font size */
+  color: var(--primary-brand); /* More vibrant title color */
+  margin-top: 0;
+  margin-bottom: 6px; /* Reduced margin */
+  font-weight: 600; /* Slightly bolder */
+  line-height: 1.4;
+}
+
+.data-card:hover h3 {
+  color: var(--primary-brand-dark); /* Darker primary brand color on hover */
+}
+
+.card-value {
+  font-size: 1.8rem; /* Slightly smaller font size */
+  font-weight: 700; /* Bold */
+  color: var(--primary-brand-dark); /* More vibrant value color */
+  margin-bottom: 6px; /* Reduced margin */
+  line-height: 1.2;
+}
+
+.data-card:hover .card-value {
+  color: var(--primary-brand); /* Primary brand color on hover */
+}
+
+.card-trend {
+  font-size: 0.8rem; /* Slightly smaller font size */
+  color: var(--accent-color); /* More vibrant trend text */
+  display: flex;
+  align-items: center;
+  margin-top: auto; /* Pushes trend to bottom if card is flex-column */
+}
+
+.data-card:hover .card-trend {
+  color: var(--primary-brand-dark); /* Darker primary brand color on hover */
+}
+.card-trend svg { /* For trend up/down arrows */
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    /* fill will be set by .positive, .negative, .neutral classes */
+}
+.card-trend .positive { color: var(--accent-color); }
+.card-trend .positive svg { fill: var(--accent-color); }
+.card-trend .negative { color: var(--danger-color); }
+.card-trend .negative svg { fill: var(--danger-color); }
+.card-trend .neutral { color: var(--text-tertiary); }
+.card-trend .neutral svg { fill: var(--text-tertiary); }
+
+
+.accordion-container {
+  margin-top: 24px;
+}
+
+.accordion-container h2 { /* Title for the accordion section */
+  font-size: 1.25rem; /* 20px */
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.accordion-item {
+  background-color: var(--background-content);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-md);
+  margin-bottom: 12px;
+  overflow: hidden; /* For smooth expand/collapse */
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease;
+}
+.accordion-item:last-child {
+    margin-bottom: 0;
+}
+.accordion-item.open { /* Add this class when accordion is open */
+    box-shadow: var(--shadow-md);
+}
+
+
+.accordion-header {
+  background-color: var(--background-main); /* Added subtle background color */
+  padding: 16px 20px;
+  width: 100%;
+  text-align: left;
+  border: none; /* Remove internal border */
+  border-bottom: 1px solid transparent; /* Placeholder for transition */
+  cursor: pointer;
+  font-size: 1rem; /* 16px */
+  font-weight: 500;
+  color: var(--text-primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+/* Add border to collapsed item header, except if it's the last item */
+.accordion-item:not(.open) .accordion-header {
+    border-bottom-color: var(--border-secondary);
+}
+.accordion-item:last-child:not(.open) .accordion-header {
+    border-bottom-color: transparent;
+}
+.accordion-item.open .accordion-header { /* No bottom border when open */
+    border-bottom-color: transparent;
+}
+
+
+.accordion-header:hover {
+  background-color: var(--background-main); /* Subtle hover */
+  color: var(--primary-brand);
+}
+.accordion-header svg { /* Chevron icon */
+    width: 20px;
+    height: 20px;
+    fill: var(--text-tertiary);
+    transition: transform 0.3s ease;
+}
+.accordion-item.open .accordion-header svg {
+    transform: rotate(180deg); /* Assuming chevron points down initially */
+    fill: var(--primary-brand);
+}
+
+
+.accordion-content {
+  /* padding: 20px; Set initial padding to 0 for transition if using max-height */
+  padding: 0 20px;
+  background-color: var(--background-content);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, padding-top 0.3s ease-out, padding-bottom 0.3s ease-out;
+}
+.accordion-item.open .accordion-content {
+    max-height: 1000px; /* Set max-height to a large enough value to show content */
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+
+.metadata-section { /* For sections within accordion or cards */
+  margin-bottom: 16px;
+  padding: 16px;
+  background-color: var(--background-main);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-secondary);
+}
+.metadata-section:last-child { margin-bottom: 0; }
+
+.metadata-section h4 {
+  font-size: 0.95rem; /* 15px */
+  color: var(--primary-brand);
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.metadata-section p {
+  font-size: 0.875rem; /* 14px */
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.metadata-section p strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  width: 100%;
+  margin-top: 16px;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-xs);
+}
+
+.accordion-content table, .data-preview-page table { /* General table styling */
+  width: 100%;
+  border-collapse: collapse;
+  /* margin-top: 10px; Handled by .table-responsive or parent */
+}
+
+.accordion-content th, .data-preview-page th,
+.accordion-content td, .data-preview-page td {
+  border: none; /* Remove internal cell borders for a cleaner look */
+  border-bottom: 1px solid var(--border-secondary); /* Horizontal lines only */
+  padding: 12px 16px; /* Increased padding */
+  text-align: left;
+  font-size: 0.875rem; /* 14px */
+  vertical-align: middle;
+}
+.accordion-content tr:last-child td, .data-preview-page tr:last-child td {
+    border-bottom: none; /* No border for the last row cells */
+}
+
+.accordion-content th, .data-preview-page th {
+  background-color: var(--background-main); /* Light header for table */
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.8rem; /* Slightly smaller for header */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.accordion-content td, .data-preview-page td {
+  color: var(--text-secondary);
+}
+
+.accordion-content tbody tr:hover td,
+.data-preview-page tbody tr:hover td {
+  background-color: var(--primary-brand-light); /* Subtle hover for table rows */
+  color: var(--primary-brand-dark);
+}
+/* Remove alternating row color for a cleaner look, rely on hover and borders
+.accordion-content tbody tr:nth-child(even) {
+  background-color: var(--background-main);
+}
+*/
+
+/* END frontend/src/components/DataPreview/DataPreview.css */
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.spinner-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+}

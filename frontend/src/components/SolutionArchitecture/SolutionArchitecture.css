@@ -1,0 +1,190 @@
+/* frontend/src/components/SolutionArchitecture/SolutionArchitecture.css - REVAMPED */
+/* Import highlight.js theme */
+@import '~highlight.js/styles/atom-one-dark.css';
+
+/* (Assuming this is a placeholder or simple content page) */
+
+.solution-architecture-page {
+  /* font-family is inherited */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  /* Padding is handled by .App-main-content */
+  /* Background is handled by .App-main-content */
+}
+
+/* .page-header styles are global and defined in App.css */
+
+/* Container for the architecture diagram */
+.architecture-diagram-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center; /* Center vertically */
+  padding: 20px; /* Add some padding around the image */
+  background-color: var(--background-content); /* Match page background */
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  margin: 20px; /* Add margin around the container */
+  overflow: hidden; /* Ensure image doesn't overflow */
+}
+
+/* Style for the architecture diagram image */
+.architecture-diagram {
+  max-width: 100%; /* Ensure image is responsive */
+  max-height: 80vh; /* Limit height to prevent excessive scrolling */
+  height: auto; /* Maintain aspect ratio */
+  display: block; /* Remove extra space below image */
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg); /* Add a prominent shadow */
+}
+
+/* Remove or adjust placeholder styles if no longer needed */
+/*
+.content-placeholder {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: var(--text-tertiary);
+  background-color: var(--background-content);
+  border-radius: var(--border-radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-md);
+  margin: auto;
+  max-width: 700px;
+  width: 100%;
+}
+*/
+
+.content-placeholder svg.placeholder-icon { /* For a large placeholder icon */
+    width: 80px;
+    height: 80px;
+    fill: var(--primary-brand-light);
+    margin-bottom: 24px;
+}
+
+.content-placeholder h2 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.content-placeholder p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
+.content-placeholder .placeholder-action button { /* Example button */
+    background-color: var(--primary-brand);
+    color: var(--text-on-brand);
+    border: none;
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.content-placeholder .placeholder-action button:hover {
+    background-color: var(--primary-brand-dark);
+}
+
+
+.content-placeholder img { /* If using an image */
+  max-width: 250px; /* Adjust as needed */
+  margin-top: 20px;
+  opacity: 0.5; /* Make it more subtle */
+  border-radius: var(--border-radius-md);
+}
+
+/* Code Section Styling */
+.code-section-container {
+  margin: 20px; /* Add margin around the code section */
+  padding: 20px;
+  background-color: var(--background-content); /* Match page background */
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.code-section-container h2 {
+  font-size: 1.25rem; /* Section title font size */
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-secondary);
+  padding-bottom: 10px;
+}
+
+/* Code Section Styling */
+.code-section-container {
+  margin: 20px; /* Add margin around the code section */
+  padding: 20px;
+  background-color: var(--background-content); /* Match page background */
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.code-section-container h2 {
+  font-size: 1.25rem; /* Section title font size */
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-secondary);
+  padding-bottom: 10px;
+}
+
+/* New styles for row layout and collapsible sections */
+.code-blocks-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Gap between code rows */
+}
+
+.code-block-row {
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius-md);
+  overflow: hidden;
+  background-color: var(--background-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.collapsible-header {
+  font-size: 1rem;
+  color: var(--primary-brand);
+  margin: 0;
+  padding: 12px 15px;
+  background-color: var(--background-main);
+  border-bottom: 1px solid var(--border-secondary);
+  font-weight: 600;
+  cursor: pointer; /* Indicate it's clickable */
+  display: flex;
+  justify-content: space-between; /* Space out title and arrow */
+  align-items: center;
+}
+
+.code-content {
+  padding: 0; /* Remove padding from this container */
+}
+
+/* Styling for react-syntax-highlighter output */
+.code-content pre {
+  margin: 0 !important; /* Override default margin */
+  padding: 15px !important; /* Add padding inside the code block */
+  overflow-x: auto !important; /* Enable horizontal scrolling for long lines */
+}
+
+.code-content code {
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important; /* Ensure monospace font */
+  font-size: 0.9rem !important; /* Adjust font size */
+  line-height: 1.5 !important; /* Adjust line height */
+}
+
+
+/* END frontend/src/components/SolutionArchitecture/SolutionArchitecture.css */
