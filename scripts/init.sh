@@ -1,4 +1,4 @@
 # Your project name. It acts as a unique identifier.
-export PROJECT_NAME=cymbal-telco-da
+export PROJECT_NAME=
 # Your GCP Project ID
-export PROJECT_ID=cymbal-telco-da
+export PROJECT_ID=

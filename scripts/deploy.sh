@@ -4,10 +4,10 @@
 # Define App identifiers and corresponding Cloud Run Service Names
 APP_IDENTIFIER="app" # Argument for Flask app
 
-APP_SERVICE_NAME="telco-da-app"   # Cloud Run service name for the Flask app
+APP_SERVICE_NAME=""   # Cloud Run service name for the Flask app
 # Define components of the image name
 GCP_REGION="us-central1"
-ARTIFACT_REGISTRY_REPO="telco-da-repo" # CHANGE IF YOUR REPO NAME IS DIFFERENT
+ARTIFACT_REGISTRY_REPO="" # CHANGE IF YOUR REPO NAME IS DIFFERENT
 IMAGE_NAME="main-app" # Name of the image itself
 TAG="latest"
 # Note: MAIN_IMAGE_NAME is now constructed later, after PROJECT_ID is confirmed
