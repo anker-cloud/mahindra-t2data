@@ -1,0 +1,394 @@
+/* frontend/src/components/ChatInterface/ChatInterface.css - REVAMPED */
+
+.chat-interface-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: var(--background-content); /* Chat area has its own white bg */
+  box-sizing: border-box;
+  border-radius: var(--border-radius-lg); /* Rounded corners for the whole chat module */
+  box-shadow: var(--shadow-md);
+  overflow: hidden; /* Important for rounded corners and child layout */
+}
+
+.page-header.chat-page-header {
+  margin-bottom: 0; /* Remove bottom margin as chat-interface handles structure */
+  border-bottom: 1px solid var(--border-secondary);
+  padding: 16px 20px; /* Adjusted padding */
+  flex-shrink: 0;
+}
+
+.page-header.chat-page-header h1 {
+  font-size: 1.25rem; /* 20px */
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  width: 100%;
+  background-color: var(--background-content); /* Ensure consistency */
+  overflow: hidden; /* Crucial for .chat-messages scrolling */
+}
+
+.chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Slightly more gap */
+  /* background-color: var(--background-main); /* Subtle contrast for message area if desired */
+}
+
+.message {
+  display: flex;
+  max-width: 70%; /* Slightly less max-width for better bubble appearance */
+  animation: fadeIn 0.3s ease-out;
+  position: relative; /* For potential avatar or extra info */
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.message.user {
+  align-self: flex-end;
+}
+
+.message.bot {
+  align-self: flex-start;
+}
+
+.message.system {
+  align-self: center; /* Center system messages */
+  font-style: italic;
+  color: var(--text-tertiary);
+  max-width: 100%;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.message-bubble {
+  padding: 10px 16px; /* Slightly adjusted padding */
+  border-radius: var(--border-radius-lg); /* More rounded bubbles */
+  line-height: 1.6;
+  word-wrap: break-word;
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.message.user .message-bubble {
+  background-color: var(--primary-brand);
+  color: var(--text-on-brand);
+  border-bottom-right-radius: var(--border-radius-sm); /* "Tail" effect */
+}
+
+.message.bot .message-bubble {
+  background-color: var(--background-main); /* Lighter grey for bot */
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-bottom-left-radius: var(--border-radius-sm); /* "Tail" effect */
+  box-shadow: none; /* Can remove shadow for bot if it feels too heavy */
+}
+
+.message.system .message-bubble {
+  background-color: transparent;
+  color: var(--text-tertiary);
+  border: none;
+  box-shadow: none;
+  padding: 4px 10px;
+}
+
+.message-text {
+  margin: 0;
+}
+/* Ensure Markdown content inside message-text inherits bubble color */
+.message.user .message-text, .message.user .message-text p, .message.user .message-text code {
+    color: var(--text-on-brand);
+}
+.message.user .message-text a {
+    color: var(--primary-brand-light);
+    text-decoration: underline;
+}
+.message.user .message-text :not(pre) > code {
+    background-color: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.3); /* Added for consistency */
+    color: var(--text-on-brand);
+}
+/* Bot message text colors are generally fine with --text-primary */
+
+
+.message-timestamp {
+  display: block;
+  font-size: 0.7rem; /* Smaller timestamp */
+  margin-top: 6px;
+  text-align: right;
+  opacity: 0.6;
+}
+
+.message.user .message-timestamp {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.message.bot .message-timestamp {
+  color: var(--text-tertiary);
+}
+
+
+.chat-input-area {
+  display: flex;
+  padding: 16px 20px; /* Consistent padding */
+  border-top: 1px solid var(--border-secondary);
+  background-color: var(--background-content); /* Match chat interface bg */
+  align-items: center;
+  /* border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg); */ /* Already handled by .chat-interface-page overflow:hidden */
+  flex-shrink: 0;
+}
+
+.chat-input-area input[type="text"] {
+  flex-grow: 1;
+  padding: 12px 18px; /* More padding */
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius-md); /* Consistent border radius */
+  font-size: 0.95rem;
+  margin-right: 12px;
+  outline: none;
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  background-color: var(--background-content); /* Ensure it's not transparent */
+  color: var(--text-primary);
+}
+
+.chat-input-area input[type="text"]:focus {
+  border-color: var(--primary-brand);
+  box-shadow: 0 0 0 3px rgba(var(--primary-brand-rgb), 0.2);
+}
+
+
+.chat-input-area input[type="text"]:disabled {
+  background-color: var(--background-main);
+  cursor: not-allowed;
+}
+
+.chat-input-area button {
+  background-color: var(--primary-brand);
+  color: var(--text-on-brand);
+  border: none;
+  border-radius: var(--border-radius-md); /* Match input field */
+  width: auto; /* Allow button to size based on padding */
+  padding: 0 16px; /* Padding for text or icon + text */
+  height: 46px; /* Match input height approx */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+  outline: none;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.chat-input-area button.icon-only { /* For icon-only send button */
+    width: 46px;
+    padding: 0;
+    border-radius: 50%;
+}
+
+
+.chat-input-area button svg {
+  width: 20px; /* Adjusted for new button size */
+  height: 20px;
+  fill: currentColor;
+}
+
+.chat-input-area button:hover:not(:disabled) {
+  background-color: var(--primary-brand-dark);
+}
+
+.chat-input-area button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.chat-input-area button:disabled {
+  background-color: var(--border-primary);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+.loader { /* General loader style */
+  border: 3px solid var(--background-main);
+  border-top: 3px solid var(--primary-brand);
+  border-radius: 50%;
+  width: 20px; /* Reduced size */
+  height: 20px; /* Reduced size */
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Suggested Questions Styling */
+.suggested-questions {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  gap: 12px; /* Adjusted gap */
+  padding: 12px 20px; /* Adjusted padding */
+  border-bottom: 1px solid var(--border-secondary);
+  background-color: var(--background-content); /* Match chat interface bg */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-primary) var(--background-main);
+  flex-shrink: 0;
+}
+.suggested-questions::-webkit-scrollbar { height: 6px; }
+.suggested-questions::-webkit-scrollbar-track { background: var(--background-main); border-radius: var(--border-radius-sm); }
+.suggested-questions::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: var(--border-radius-sm); }
+.suggested-questions::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
+
+.suggestion-card {
+  background-color: var(--background-content); /* Keep background white */
+  border: 1px solid var(--border-secondary); /* Subtle border */
+  border-radius: var(--border-radius-md); /* Consistent radius */
+  padding: 12px 18px; /* Increased padding for bigger size */
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  font-size: 1rem; /* Slightly larger font size */
+  color: var(--primary-brand-dark); /* Dark primary brand color */
+  flex: 0 0 auto; /* Prevent shrinking/growing */
+  min-width: 220px; /* Increased min-width */
+  max-width: 300px; /* Increased max-width */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* Ensure text is on a single line for truncation */
+  box-shadow: var(--shadow-sm); /* More prominent shadow */
+}
+.suggestion-card:hover {
+  background-color: var(--background-main); /* Subtle background on hover */
+  border-color: var(--primary-brand); /* Primary brand border on hover */
+  color: var(--primary-brand-dark); /* Dark primary brand color on hover */
+  box-shadow: var(--shadow-md); /* More prominent shadow on hover */
+}
+.suggestion-card h4 { /* If you have titles in suggestion cards */
+  margin: 0 0 6px 0; /* Increased margin */
+  font-size: 1.1em; /* Relative to card's font-size, slightly larger */
+  font-weight: 700; /* Bolder heading */
+  color: var(--primary-brand); /* Primary brand color for heading */
+  overflow: hidden; /* Ensure heading also truncates if needed */
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.suggestion-card p {
+  margin: 0;
+  font-size: 1em; /* Relative to card's font-size */
+  color: var(--text-secondary); /* Subtle text color */
+  overflow: hidden; /* Truncate text */
+  text-overflow: ellipsis;
+  white-space: nowrap; /* Keep text on a single line */
+}
+
+
+/* Typing Indicator Styling */
+.typing-indicator { /* This class should be on the .message.bot element */
+    /* Styles inherited from .message.bot */
+}
+.typing-indicator .message-bubble {
+  background-color: var(--background-main);
+  color: var(--text-primary);
+  border: 1px solid var(--border-secondary);
+  border-bottom-left-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  box-shadow: none;
+}
+.typing-text {
+  margin-right: 8px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.typing-dots {
+  display: flex;
+  align-items: center;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  margin: 0 2.5px;
+  background-color: var(--text-tertiary); /* More subtle dots */
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.dot:nth-child(1) { animation-delay: -0.32s; }
+.dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+
+
+/* Markdown styles from original, ensure variables are updated */
+.message-text table { width: 100%; border-collapse: collapse; margin: 1.5em 0; border: 1px solid var(--border-secondary); box-shadow: var(--shadow-sm); border-radius: var(--border-radius-md); overflow: hidden; }
+.message-text th, .message-text td { border: 1px solid var(--border-secondary); padding: 12px 14px; text-align: left; font-size: 0.875rem; }
+.message-text th { background-color: var(--background-main); font-weight: 600; color: var(--text-primary); }
+.message-text tr:nth-child(even) td { background-color: var(--background-main); } /* For striped rows */
+.message-text tr:hover td { background-color: var(--primary-brand-light) !important; color: var(--primary-brand-dark); }
+
+.message-text :not(pre) > code {
+  background-color: var(--primary-brand-light); /* Use a light brand color for inline code */
+  padding: 0.2em 0.5em;
+  margin: 0 0.1em;
+  border-radius: var(--border-radius-sm);
+  color: var(--primary-brand-dark);
+  font-size: 0.85em;
+  border: 1px solid var(--primary-brand);
+}
+.message.user .message-text :not(pre) > code {
+  background-color: rgba(255,255,255,0.2);
+  border-color: rgba(255,255,255,0.3);
+  color: var(--text-on-brand);
+}
+
+.message-text blockquote {
+  border-left: 3px solid var(--primary-brand);
+  padding-left: 1em;
+  color: var(--text-secondary);
+  margin: 1em 0;
+  font-style: italic;
+}
+.message-text ul, .message-text ol { margin: 0.8em 0; padding-left: 1.5em; }
+.message-text li { margin-bottom: 0.3em; }
+.message-text h1, .message-text h2, .message-text h3, .message-text h4, .message-text h5, .message-text h6 {
+  margin-top: 1.5em; margin-bottom: 0.8em; font-weight: 600; color: var(--text-primary); line-height: 1.3;
+}
+.message-text h1 { font-size: 1.5em; }
+.message-text h2 { font-size: 1.3em; }
+.message-text h3 { font-size: 1.15em; }
+.message-text p { margin-bottom: 1em; line-height: 1.6; }
+.message-text img { max-width: 100%; height: auto; border-radius: var(--border-radius-md); margin: 0.5em 0; box-shadow: var(--shadow-sm); }
+
+
+@media (max-width: 768px) {
+  .chat-messages { padding: 16px; gap: 12px; }
+  .message { max-width: 80%; }
+  .message-bubble { padding: 8px 12px; font-size: 0.85rem; }
+  .chat-input-area { padding: 12px 16px; }
+  .chat-input-area input[type="text"] { padding: 10px 16px; font-size: 0.9rem; }
+  .chat-input-area button, .chat-input-area button.icon-only { height: 42px; }
+  .chat-input-area button.icon-only { width: 42px; }
+  .chat-input-area button svg { width: 18px; height: 18px; }
+  .suggested-questions { padding: 10px 16px; gap: 10px; }
+  .suggestion-card { padding: 8px 12px; font-size: 0.8rem; min-width: 180px; }
+}
+
+@media (max-width: 480px) {
+  .message { max-width: 90%; }
+  .page-header.chat-page-header h1 { font-size: 1.1rem; }
+}
+
+/* END frontend/src/components/ChatInterface/ChatInterface.css */

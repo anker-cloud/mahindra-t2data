@@ -1,0 +1,113 @@
+/* frontend/src/components/VerticalNav/VerticalNav.css - REVAMPED */
+
+.vertical-nav {
+  width: var(--vertical-nav-width);
+  height: 100%; /* Takes 100% height of .App-content-area */
+  /* Gradient hue from the provided image */
+  background: linear-gradient(to bottom, #1a2a5a, #3a5a9a); /* Gradient based on image */
+  padding: 24px 0;
+  box-shadow: var(--shadow-md); /* Softer, more modern shadow */
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  color: #ffffff; /* White text color for dark background */
+  transition: width 0.3s ease; /* For potential collapsible sidebar */
+}
+
+.logo-container {
+  margin-bottom: 32px;
+  padding: 0 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Example: If your logo is an SVG or image */
+.logo-container img, .logo-container svg {
+  height: 36px; /* Adjust as needed */
+  margin-right: 12px;
+}
+
+.logo-text-main { /* For a main title like "American Airlines" in image */
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  color: var(--text-on-brand);
+  letter-spacing: 0.5px;
+}
+/* You can add a subtitle if needed */
+.logo-text-subtitle {
+  font-size: 0.75rem; /* 12px */
+  color: var(--primary-brand-light); /* Lighter text for subtitle */
+  display: block;
+  margin-top: -2px;
+}
+
+
+.vertical-nav ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.vertical-nav ul li {
+  margin-bottom: 4px; /* Reduced margin for a tighter look */
+}
+
+.vertical-nav ul li a {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8); /* Slightly transparent white text for inactive links */
+  font-size: 0.95rem; /* 15px */
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  padding: 12px 24px; /* Consistent padding */
+  margin: 0 12px; /* Side margin for rounded effect */
+  border-radius: var(--border-radius-md);
+  transition: background-color 0.2s ease, color 0.2s ease, fill 0.2s ease;
+  position: relative; /* For potential active indicator */
+}
+
+.vertical-nav ul li a:hover {
+  background-color: rgba(100, 149, 237, 0.2); /* Subtle hover with lighter blue accent color */
+  color: #ffffff; /* Solid white text on hover */
+}
+
+.vertical-nav ul li a.active-link {
+  background-color: #6495ed; /* Use lighter blue accent color for active */
+  color: #ffffff; /* Solid white text for active link */
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Active link indicator like in the image (optional left border) */
+/*
+.vertical-nav ul li a.active-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 60%;
+  width: 4px;
+  background-color: var(--accent-color);
+  border-radius: 0 2px 2px 0;
+}
+*/
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  fill: currentColor; /* Icons will inherit color from the <a> tag */
+  transition: fill 0.2s ease;
+  opacity: 0.8;
+}
+
+.vertical-nav ul li a:hover .nav-icon,
+.vertical-nav ul li a.active-link .nav-icon {
+  opacity: 1;
+}
+
+/* END frontend/src/components/VerticalNav/VerticalNav.css */

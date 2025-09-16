@@ -1,0 +1,192 @@
+/* App.css - Global Styles - REVAMPED */
+
+/* Define CSS Variables for Theme Colors - Inspired by modern dashboards */
+:root {
+  /* Primary Palette - Based on the inspiration image's vertical nav and accents */
+  --primary-brand: #3B82F6; /* A vibrant, modern blue (replacing --primary-dark-blue) */
+  --primary-brand-dark: #2563EB; /* Darker shade for hover/active states */
+  --primary-brand-light: #93C5FD; /* Lighter shade for subtle backgrounds or accents */
+  --primary-brand-rgb: 59, 130, 246; /* RGB version for use with rgba() box-shadow */
+
+  /* Secondary & Accent Palette */
+  --accent-color: #10B981; /* A vibrant green for success, positive trends, or CTAs */
+  --accent-color-dark: #059669;
+  --warning-color: #F59E0B; /* Amber for warnings */
+  --danger-color: #EF4444; /* Red for errors or critical alerts */
+
+  /* Neutral Palette - For backgrounds, text, and borders */
+  --background-main: #F3F4F6; /* Very light grey, almost off-white (replacing --background-grey) */
+  --background-content: #FFFFFF; /* Pure white for content cards/areas (same as --content-background) */
+  --background-elevated: #FFFFFF; /* For elements that need to appear "above" content, like modals or dropdowns */
+
+  --text-primary: #1F2937; /* Dark cool grey for primary text (replacing --text-color-dark) */
+  --text-secondary: #4B5563; /* Medium grey for secondary text */
+  --text-tertiary: #6B7280; /* Lighter grey for less important text/placeholders */
+  --text-on-brand: #FFFFFF; /* White text for use on primary brand backgrounds (same as --text-color-light) */
+  --text-link: var(--primary-brand);
+
+  --border-primary: #D1D5DB; /* Light grey for primary borders (replacing --border-color) */
+  --border-secondary: #E5E7EB; /* Even lighter grey for subtle dividers */
+
+  /* UI Elements */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+
+  --navbar-height: 64px; /* Slightly taller navbar */
+  --navbar-height-mobile: 56px;
+  --vertical-nav-width: 260px; /* Existing width, can be adjusted */
+}
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Basic reset and full height setup */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: var(--font-family-sans);
+  background-color: var(--background-main);
+  overflow-x: hidden;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.App-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.App-content-area {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  height: calc(100vh - var(--navbar-height));
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .App-content-area {
+    height: calc(100vh - var(--navbar-height-mobile));
+  }
+}
+
+.App-main-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 24px; /* Increased padding for more breathing room */
+  background-color: var(--background-main); /* Main background for the content area */
+}
+
+/* General Page Header Styling (can be used across different pages) */
+.page-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.page-header h1 {
+  font-size: 1.75rem; /* 28px */
+  color: var(--text-primary);
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.page-header p.subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* Custom Scrollbars for Webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background-main);
+  border-radius: var(--border-radius-sm);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: var(--border-radius-sm);
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Code styling (if needed outside chat) */
+code {
+  font-family: var(--font-family-mono);
+  background-color: var(--background-main);
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 0.875em;
+  border-radius: var(--border-radius-sm);
+  color: var(--accent-color-dark); /* Or a more neutral color */
+}
+
+pre {
+  background-color: #2d2d2d; /* Keeping your dark theme for code blocks */
+  color: #cccccc;
+  padding: 1em;
+  border-radius: var(--border-radius-md);
+  overflow-x: auto;
+  margin: 1em 0;
+  border: 1px solid #3f3f3f;
+  box-shadow: var(--shadow-sm);
+}
+pre code {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  font-size: 1em; /* Reset to parent pre size */
+  color: inherit;
+}
+/* Syntax highlighting colors from your original CSS are good, can be kept as is */
+/* (Assuming they are defined elsewhere or within the pre block for specific languages) */
+/* Example for Prism.js or similar - these were in your original chat CSS */
+.message-text pre code .token.keyword { color: #cc99cd; }
+.message-text pre code .token.string { color: #7ec699; }
+.message-text pre code .token.comment { color: #999999; }
+.message-text pre code .token.number { color: #f08d49; }
+.message-text pre code .token.boolean { color: #f08d49; }
+.message-text pre code .token.function { color: #6196ee; }
+.message-text pre code .token.class-name { color: #ffda7b; }
+.message-text pre code .token.operator { color: #cccccc; }
+.message-text pre code .token.punctuation { color: #cccccc; }
+
+
+/* END App.css */
+
+.App-header {
+  background-color: #282c34;
+  min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+}

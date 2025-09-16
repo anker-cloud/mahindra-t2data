@@ -1,0 +1,81 @@
+name: UserSchema
+recordFields:
+- annotations:
+    description: The Google Cloud full resource ID of the related table. (project_id.dataset_id.table_id)
+    displayName: related_table_id
+    displayOrder: 1
+  constraints:
+    required: true
+  index: 1
+  name: related-table-id
+  type: string
+- annotations:
+    description: Array of key pairs used for joining
+    displayName: Join Keys
+    displayOrder: 2
+  constraints:
+    required: true
+  index: 2
+  name: join-keys
+  recordFields:
+  - annotations:
+      description: The name of the join key column in the source table.
+      displayName: Local Column
+      displayOrder: 1
+      stringValues:
+      - field_name
+    constraints:
+      required: true
+    index: 1
+    name: local-column
+    type: string
+  - annotations:
+      description: The name of the join key column in the related table.
+      displayName: Related Column
+      displayOrder: 2
+      stringValues:
+      - field_name
+    constraints:
+      required: true
+    index: 2
+    name: related-column
+    type: string
+  type: record
+  typeId: Join Key Pair
+- annotations:
+    description: Type of join (e.g., INNER, LEFT, RIGHT, FULL). Defaults to INNER
+      if not specified.
+    displayName: Join Type
+    displayOrder: 3
+    stringValues:
+    - INNER
+    - LEFT
+    - RIGHT
+    - FULL
+  constraints: {}
+  index: 3
+  name: join-type
+  type: string
+- annotations:
+    description: A natural language description of this join relationship.
+    displayName: Relationship Description
+    displayOrder: 4
+  constraints: {}
+  index: 4
+  name: relationship-description
+  type: string
+- annotations:
+    description: The cardinality of the relationship (e.g., ONE_TO_ONE, ONE_TO_MANY,
+      MANY_TO_ONE, MANY_TO_MANY).
+    displayName: 'Cardinality '
+    displayOrder: 5
+    stringValues:
+    - ONE_TO_ONE
+    - ONE_TO_MANY
+    - MANY_TO_ONE
+    - MANY_TO_MANY
+  constraints: {}
+  index: 5
+  name: cardinality
+  type: string
+type: record
