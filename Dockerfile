@@ -5,6 +5,11 @@
   RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
       else npm install --legacy-peer-deps; fi
   COPY frontend/ ./
+
+
+  # ADD THIS LINE TO FIX THE PERMISSION ERROR
+  RUN chmod +x ./node_modules/.bin/react-scripts
+  
   RUN npm run build
   
   # --- Stage 2: Setup Python Runtime Environment ---

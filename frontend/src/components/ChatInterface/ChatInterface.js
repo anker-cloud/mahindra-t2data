@@ -272,7 +272,7 @@ const TypingIndicator = () => {
 
 const ChatInterface = ({ username }) => {
   const [messages, setMessages] = useState([
-    { id: 1, text: `Hello! I am Retail DataWise. I can answer business questions over your BigQuery data. How can I assist you today, ${username}?`, sender: 'bot', timestamp: new Date() }
+    { id: 1, text: `Hello! I am your Mahindra Data Agent. I can answer business questions over your BigQuery data. How can I assist you today, ${username}?`, sender: 'bot', timestamp: new Date() }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -363,7 +363,7 @@ const ChatInterface = ({ username }) => {
   return (
     <div className="chat-interface-page">
       <header className="page-header chat-page-header">
-        <h1>DataWise Agent Chat</h1>
+        <h1>Talk to Mahindra Data</h1>
       </header>
       <div className="chat-interface">
         <div className="chat-messages">
