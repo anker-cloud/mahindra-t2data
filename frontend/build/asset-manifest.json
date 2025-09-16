@@ -1,0 +1,17 @@
+{
+  "files": {
+    "main.css": "/static/css/main.de876cd1.css",
+    "main.js": "/static/js/main.f698b42e.js",
+    "static/js/453.7b4e5a59.chunk.js": "/static/js/453.7b4e5a59.chunk.js",
+    "static/media/mahindra-logo.png": "/static/media/mahindra-logo.c46c38d5c9feb7b3198a.png",
+    "static/media/archi.png": "/static/media/archi.32e29d28ff18f5f98995.png",
+    "index.html": "/index.html",
+    "main.de876cd1.css.map": "/static/css/main.de876cd1.css.map",
+    "main.f698b42e.js.map": "/static/js/main.f698b42e.js.map",
+    "453.7b4e5a59.chunk.js.map": "/static/js/453.7b4e5a59.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.de876cd1.css",
+    "static/js/main.f698b42e.js"
+  ]
+}

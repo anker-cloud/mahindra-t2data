@@ -27,9 +27,9 @@ bigquery_data_schema_and_context: |
 
   **General Notes:**
   * Use standard GoogleSQL.
-  * **Always use fully qualified table names:** `project_id.dataset_name.table_name`.
+  * **Always use fully qualified table names:** `mdp-ad-td-prd.mdp-ad-td-bqd-common.table_name`.
   * **Date/Timeframe Handling:** Apply date/timeframe filtering using the appropriate date/timestamp columns (`BUSINESS_DATE`, `DATEID`, `timestamp`, `date_id`) **in the `WHERE` clause**. These columns are often partition keys, crucial for performance.
-      * If the user specifies a period (e.g., 'yesterday', 'last month', 'April 2025', 'between date A and date B', 'in the last 7 days'), translate this into the appropriate SQL `WHERE` clause using date functions (like `DATE_SUB`, `CURRENT_DATE`, `TIMESTAMP`, `BETWEEN`) and the relevant date column(s). Remember `CURRENT_DATE('+08')` for the relevant timezone (Singapore Time, current time is Friday, April 11, 2025 4:31 AM +08). Assume the latest `subscribers_info` data is from **Nov 30, 2024**.
+      * If the user specifies a period (e.g., 'yesterday', 'last month', 'April 2025', 'between date A and date B', 'in the last 7 days'), translate this into the appropriate SQL `WHERE` clause using date functions (like `DATE_SUB`, `CURRENT_DATE`, `TIMESTAMP`, `BETWEEN`) and the relevant date column(s). Remember `CURRENT_DATE('+05:30')` for the relevant timezone (India Standard Time, current time is Tuesday, September 16, 2025 9:52 AM +05:30). Assume the latest `subscribers_info` data is from **Nov 30, 2024**.
       * ***If the user does not specify a timeframe (date, date range, period like 'last month', etc.), and the query requires filtering by date (which is common for these tables), you MUST ask for clarification (as per Step 2 in the workflow).*** Explain why the timeframe is needed (e.g., "To calculate the total usage, I need to know for which period. Please specify a date or date range.") and suggest options if helpful (e.g., "Should I use data from Dec 31st, 2024? Or a specific range in Q4 2024?"). **Do not assume 'latest' or any default timeframe without confirmation.**
   * Columns ending in `_KEY` or `_MASKED` are encrypted identifiers (String format). Use them primarily for JOIN operations. Avoid selecting them for display or using them in WHERE clauses unless explicitly requested or necessary for joining/grouping.
   * Handle potential NULL values appropriately (e.g., using `IFNULL`, `COALESCE`, or filtering).
@@ -59,20 +59,574 @@ table_schema_and_join_information: |
 
       * **Join Relationship Aspect (Optional)**
           * If present, contains information about how this table relates to other tables:
-              * Related table IDs (e.g., `project.dataset.table`)
+              * Related table IDs (e.g., `mdp-ad-td-prd.mdp-ad-td-bqd-common.table_name`)
               * Join keys (local and related columns)
               * Join type : The preferred SQL join type (e.g., "INNER", "LEFT"). Default to INNER if not specified.
               * Relationship descriptions : A natural language description of the join.
               * Cardinality : The cardinality of the relationship (e.g., ONE_TO_ONE, ONE_TO_MANY, MANY_TO_ONE, MANY_TO_MANY)
 
-  {table_metadata}
+  **Table: `cdp_labr_cmn`**
+  * `ro_date`: Timestamp indicating the date and time.
+  * `sv_ro_hdr_sk`: Key referencing the service repair order header.
+  * `sv_ro_bill_hdr_sk`: Key referencing the service repair order bill header.
+  * `parnt_grop`: Code representing the parent group.
+  * `locatn_cd`: Code representing the location.
+  * `sv_ro_bill_labr_dtl_sk`: Key referencing the service repair order billing labor detail.
+  * `ro_month`: Date representing the month of the repair order.
+  * `veh_registration_no`: Vehicle registration number.
+  * `vin`: Vehicle Identification Number.
+  * `customerId`: Identifier for the customer.
+  * `vehicleModels`: Vehicle model.
+  * `numberOfMahindraVehicles`: Number of Mahindra vehicles.
+  * `odmtr_redng`: Value representing the odometer reading.
+  * `segmnt_cd`: Code representing the customer segment.
+  * `modl_grop_cd`: Code representing the model group of the vehicle.
+  * `prodct_divsn`: Code representing the product division.
+  * `labr_bilbl_type`: Code indicating the billable type of the labor.
+  * `standrd_hrs`: Value representing the standard hours for a labor operation.
+  * `labr_type`: Code classifying the type of labor performed.
+  * `labr_grop`: Code representing the labor group.
+  * `sv_labr_mst_sk`: Key referencing the service labor master.
+  * `labr_code`: Code identifying the specific labor operation performed.
+  * `labr_desc`: Description of the labor performed.
+  * `labr_tax`: Value representing the tax amount associated with the labor.
+  * `labrAmount`: Value representing the labor amount.
+  * `labr_rate`: Value representing the hourly rate for the labor.
+  * `stdhrs`: Value representing the standard hours for a labor operation.
+  * `labr_discnt_amnt`: Value representing the discount amount applied to the labor.
+  * `labr_totl_amnt`: Value representing the total labor amount.
+  * `totalBillAmount`: Value representing the total bill amount.
+  * `labour_billable_type_name`: Name of the billable type of the labor.
+  * `labour_type_name`: Name of the labor type.
+  * `labour_group_name`: Name of the group to which the labor operation belongs.
+
+  **Table: `cdp_part_cmn`**
+  * `part_catgry_cd`: Code for the part category.
+  * `part_billbl_type`: Part billable type.
+  * `oem_part_ind`: OEM part indicator.
+  * `pa_part_loctn_mst_sk`: Surrogate key for the part location master.
+  * `discnt_type`: Discount type.
+  * `mfg_cd`: Manufacturer code.
+  * `uom_cd`: Unit of measure code.
+  * `part_prodct_divsn`: Part product division.
+  * `abc_ind`: ABC indicator.
+  * `hml_ind`: Indicator for HML parts.
+  * `landed_cost`: Landed cost of the part.
+  * `ris_ind`: RIS indicator.
+  * `purchs_pric`: Purchase price.
+  * `selng_pric`: Selling price.
+  * `mrp`: Maximum retail price.
+  * `hsn`: Harmonized System Nomenclature code for the part.
+  * `net_delr_pric`: Net dealer price.
+  * `part_type`: Type of part.
+  * `discnt_rate`: Discount rate.
+  * `gndp`: Gross net dealer price.
+  * `ndp`: Net dealer price.
+  * `bill_share`: Share of the bill.
+  * `totalBillAmount`: Total amount of the bill.
+  * `part_category_description`: Description of the part category.
+  * `part_billable_type_name`: Name of the part billable type.
+  * `discount_type_name`: Name of the discount type.
+  * `ro_date`: Date of the repair order.
+  * `sv_ro_hdr_sk`: Surrogate key for the service repair order header.
+  * `sv_ro_bill_hdr_sk`: Surrogate key for the service repair order billing header.
+  * `parnt_grop`: Parent group.
+  * `loctn_cd`: Location code.
+  * `sv_ro_bill_part_dtl_sk`: Surrogate key for the service repair order billing part detail.
+  * `ro_month`: Month of the repair order.
+  * `veh_registration_no`: Vehicle registration number.
+  * `vin`: Vehicle Identification Number.
+  * `customerId`: Identifier for the customer.
+  * `vehicleModels`: Vehicle models the part is used in.
+  * `numberOfMahindraVehicles`: Number of Mahindra vehicles.
+  * `odmtr_redng`: Odometer reading of the vehicle.
+  * `segmnt_cd`: Segment code.
+  * `modl_grop_cd`: Model group code.
+  * `prodct_divsn`: Product division.
+  * `part_code`: Code identifying the part.
+  * `part_desc`: Description of the part.
+  * `part_quantity`: Quantity of the part.
+  * `part_rate`: Rate of the part.
+  * `partAmount`: Amount of the part.
+  * `part_tax`: Tax amount for the part.
+  * `part_discnt_amnt`: Discount amount for the part.
+  * `part_totl_amnt`: Total amount for the part.
+
+  **Table: `ddp_dim_srv_mst_model_master`**
+  * `modl_cd`: Code identifying a specific vehicle model.
+  * `modl_desc`: Description of the vehicle model.
+  * `modl_grop_cd`: Code identifying the model group.
+  * `varnt_cd`: Code identifying the vehicle variant.
+  * `seat_capcty`: Seating capacity of the vehicle model.
+  * `modl_invc_desc`: Description of the vehicle model for invoicing purposes.
+  * `famly_cd`: Code identifying the vehicle family.
+  * `colr_cd`: Color code of the vehicle model.
+  * `prodct_divsn`: Product division associated with the vehicle model.
+  * `batch`: Batch identifier for the data processing.
+  * `oem_modl_cd`: Original Equipment Manufacturer model code.
+  * `sal_modl_grop`: Sales model group.
+  * `modl_grop_ordr_by`: Numeric value used for ordering model groups.
+  * `segmnt_cd`: Code identifying the market segment.
+  * `varnt_desc`: Description of the vehicle variant.
+  * `famly_desc`: Description of the vehicle family.
+  * `actv_ind`: Indicator of whether the vehicle model is active.
+  * `modl_grop_desc`: Description of the model group.
+  * `fuel_type`: Fuel type of the vehicle model.
+  * `emission`: Emission standard or type for the vehicle model.
+  * `driv`: Drive type of the vehicle model.
+  * `trim_levl`: Trim level of the vehicle model.
+  * `transmission`: Transmission type of the vehicle model.
+  * `mdp_created_dt`: Timestamp indicating when the record was created.
+  * `mdp_job_id`: Job identifier for the data processing.
+  * `mdp_business_date`: Business date associated with the data record.
+
+  **Table: `ddp_part_master`**
+  * `PA_PART_LOCTN_MST_SK`: Surrogate key for the part location master.
+  * `PART_NUMBR`: Unique identifier for the part.
+  * `PART_DESC`: Description of the part.
+  * `PART_PRODCT_DIVSN`: Product division to which the part belongs.
+  * `ABC_IND`: ABC classification indicator for the part.
+  * `HML_IND`: Indicator for high-mileage parts.
+  * `RIS_IND`: Indicator of the risk associated with the part.
+  * `PART_CATGRY_CD`: Code representing the category of the part.
+  * `OEM_PART_IND`: Indicator if the part is an original equipment manufacturer part.
+  * `PART_CATGRY_DESC`: Description of the part category.
+  * `link_Dealer`: Link to the dealer associated with the part.
+  * `Part_Category_Type`: Type of part category.
+  * `Part_Div_DESC`: Description of the part division.
+  * `Maxicare_Flag`: Flag indicating if the part is covered by Maxicare.
+  * `SKU_WSE_KL_QTY`: Stock keeping unit quantity for the warehouse.
+
+  **Table: `ddp_service_cmm_kpis`**
+  * `ro_cancl_date`: Repair order cancellation date.
+  * `spot_care_appl_fl`: Indicates if spot care is applied.
+  * `vehcl_toe_ind`: Vehicle tow indicator.
+  * `srv_campgn_type`: Type of service campaign.
+  * `vin`: Vehicle identification number.
+  * `ro_date`: Date of the repair order.
+  * `ro_datetime`: Date and time of the repair order.
+  * `bill_date`: Date of the bill.
+  * `bill_datetime`: Date and time of the bill.
+  * `ro_closed_date`: Date the repair order was closed.
+  * `ro_stats`: Status of the repair order.
+  * `ro_sorc`: Source of the repair order.
+  * `odmtr_redng`: Odometer reading.
+  * `sv_apntmnt_hdr_sk`: Surrogate key for the service appointment header.
+  * `ro_bill_date`: Date the repair order was billed.
+  * `cancl_date`: Cancellation date.
+  * `sv_ro_hdr_sk`: Surrogate key for the service repair order header.
+  * `parnt_grop`: Parent group.
+  * `loctn_cd`: Location code.
+  * `ro_id`: Repair order identifier.
+  * `servc_type`: Type of service performed.
+  * `doc_stats`: Status of the document.
+  * `party_cd`: Code for the party.
+  * `parts_totl_amnt`: Total amount for parts.
+  * `labr_totl_amnt`: Total labor amount.
+  * `doc_amnt`: Document amount.
+  * `parts_basc_amnt`: Basic amount for parts.
+  * `labr_basc_amnt`: Basic labor amount.
+  * `sa_emply_cd`: Code for the service advisor employee.
+  * `sa_emply_name`: Name of the service advisor employee.
+  * `promsd_delvry_date`: Promised delivery date.
+  * `revsd_promsd_delvry_date`: Revised promised delivery date.
+  * `pickup_type`: Type of pickup.
+  * `drop_type`: Type of drop.
+  * `revst_ind`: Revisit indicator.
+  * `drop_by`: Person who dropped off the vehicle.
+  * `pickup_by`: Person who picked up the vehicle.
+  * `modl_cd`: Model code.
+  * `sv_ro_bill_hdr_sk`: Surrogate key for the service repair order bill header.
+  * `online_paymnt_flg`: Indicates if online payment was made.
+  * `segmnt_cd`: Segment code.
+  * `bay_cd`: Code for the service bay.
+  * `exprs_servc_ind`: Indicates if it is an express service.
+  * `cretd_from`: Created from source.
+  * `taxi_nontx`: Indicates if the taxi is non-taxable.
+  * `chas_numbr`: Chassis number of the vehicle.
+  * `key_acnt_segmnt`: Key for the account segment.
+  * `govt_vehcl`: Indicates if it is a government vehicle.
+  * `colr_cd`: Color code.
+  * `oem_modl_cd`: OEM model code.
+  * `prodct_divsn`: Product division.
+  * `part_charg_amnt`: Charge amount for parts.
+  * `labr_charg_amnt`: Charge amount for labor.
+  * `sdd_flag`: Numeric flag indicating same day delivery.
+  * `ro_72h_above`: Numeric value indicating if the repair order took more than 72 hours.
+  * `ro_72h_below`: Numeric value indicating if the repair order was completed within 72 hours.
+  * `ro_48h_below`: Numeric value indicating if the repair order was completed within 48 hours.
+  * `ro_24h_below`: Numeric value indicating if the repair order was completed within 24 hours.
+  * `ro_close_diff`: Difference in days between repair order creation and closure.
+  * `doc_type`: Type of document.
+  * `bill_type`: Type of bill.
+  * `tea_flag`: Numeric flag for TEA.
+  * `cea_flag`: Numeric flag for CEA.
+  * `flag_mtraq`: Integer flag for MTRAQ.
+  * `m1_m2_m3_m4`: M1, M2, M3, M4 field.
+  * `rept_ro_ind`: Repeat repair order indicator.
+  * `key`: Generic key field.
+  * `ro_key`: Repair order key.
+  * `key_emp`: Key for the employee.
+  * `key_bay`: Key for the service bay.
+  * `ro_day_closed`: Number of days to close the repair order.
+  * `orgnl_warrnty_start_date`: Original warranty start date.
+  * `rsa_regstrtn_stats`: Roadside assistance registration status.
+  * `max_to_days_frm_dos`: Maximum days from date of service.
+  * `arrived_date_for_eligibility`: Date of arrival for eligibility.
+  * `rsa_registartion_flag`: Indicates if roadside assistance is registered.
+  * `rsa_expry_date`: Roadside assistance expiry date.
+  * `eligible_vehicle_flag`: Indicates if the vehicle is eligible.
+  * `orgnl_warrnty_expry_date`: Original warranty expiry date.
+  * `orgnl_warrnty_expry_km`: Original warranty expiry kilometer reading.
+  * `warranty_flag`: Indicates if a warranty is applicable.
+  * `valid_to`: Valid to date.
+  * `shield_validity_flag`: Indicates if the shield is valid.
+  * `scheme_exp_date`: Scheme expiry date.
+  * `shield_registration_flag`: Indicates if a shield registration is present.
+  * `mrp`: Maximum retail price.
+  * `ndp`: Net dealer price.
+  * `part_qty`: Quantity of parts.
+  * `ageing_bucket`: Ageing bucket.
+  * `same_day_dely_resn_cd`: Code for the same day delivery reason.
+  * `estmt_warnc_resn_cd`: Code for the estimation variance reason.
+  * `ro_cancl_resn_cd`: Code for the repair order cancellation reason.
+  * `dely_resn_cd`: Code for the delay reason.
+  * `pendncy_resn_cd`: Code for the pendency reason.
+  * `time_rev_apprvl_resn_cd`: Code for the time revision approval reason.
+  * `cost_rev_apprvl_resn_cd`: Code for the cost revision approval reason.
+  * `tech_emply_cd`: Code for the technician employee.
+  * `brought_by_name`: Name of the person who brought the vehicle.
+  * `vehicle_brought_by`: Person or entity that brought the vehicle.
+  * `sa_feedbck_stats`: Service advisor feedback status.
+  * `paints_basic_amount`: Basic amount for paints.
+  * `paints_discount_amount`: Discount amount for paints.
+  * `paints_tax_amount`: Tax amount for paints.
+  * `paints_total_amount`: Total amount for paints.
+  * `local_accessories_ancillary_income_basic_amount`: Basic amount for local accessories ancillary income.
+  * `local_accessories_ancillary_income_discount_amount`: Discount amount for local accessories ancillary income.
+  * `local_accessories_ancillary_income_tax_amount`: Tax amount for local accessories ancillary income.
+  * `local_accessories_ancillary_income_total_amount`: Total amount for local accessories ancillary income.
+  * `local_spares_customer_paid_spare_basic_amount`: Basic amount for local spare parts paid by the customer.
+  * `local_spares_customer_paid_spare_discount_amount`: Discount amount for local spare parts paid by the customer.
+  * `local_spares_customer_paid_spare_tax_amount`: Tax amount for local spare parts paid by the customer.
+  * `local_spares_customer_paid_spare_total_amount`: Total amount for local spare parts paid by the customer.
+  * `local_spares_insurance_spare_basic_amount`: Basic amount for local spares insurance spare parts.
+  * `local_spares_insurance_spare_discount_amount`: Discount amount for local spares insurance spare parts.
+  * `local_spares_insurance_spare_tax_amount`: Tax amount for local spares insurance spare parts.
+  * `local_spares_insurance_spare_total_amount`: Total amount for local spares insurance spare parts.
+  * `revenue_from_sales_of_tyres_and_batteries_ancillary_income_basic_amount`: Basic amount of revenue from sales of tires and batteries ancillary income.
+  * `revenue_from_sales_of_tyres_and_batteries_ancillary_income_discount_amount`: Discount amount of revenue from sales of tires and batteries ancillary income.
+  * `revenue_from_sales_of_tyres_and_batteries_ancillary_income_tax_amount`: Tax amount of revenue from sales of tires and batteries ancillary income.
+  * `revenue_from_sales_of_tyres_and_batteries_ancillary_income_total_amount`: Total amount of revenue from sales of tires and batteries ancillary income.
+  * `part_amount_at_gndp`: Part amount at gross dealer price.
+  * `part_amount_at_mrp`: Part amount at maximum retail price.
+  * `accessories_part_amount_at_gndp`: Accessories part amount at gross dealer price.
+  * `accessories_part_amount_at_mrp`: Accessories part amount at maximum retail price.
+  * `accesories_flag`: Integer flag for accessories.
+  * `maxicare_basic_labor_amnt`: Basic labor amount covered by Maxicare.
+  * `maximile_oils_and_consumables_basic_amnt`: Basic amount for Maximile oils and consumables.
+  * `maximile_oils_and_consumables_discount_amnt`: Discount amount for Maximile oils and consumables.
+  * `maximile_oils_and_consumables_tax_amnt`: Tax amount for Maximile oils and consumables.
+  * `maximile_oils_and_consumables_total_amnt`: Total amount for Maximile oils and consumables.
+  * `maxicare_basic_parts_amnt`: Basic parts amount covered by Maxicare.
+  * `maxicare_total_parts_amnt`: Total amount for parts covered by Maxicare.
+  * `maxicare_parts_tax_amnt`: Tax amount for parts covered by Maxicare.
+  * `maxicare_discount_parts_amnt`: Discount amount for parts covered by Maxicare.
+  * `maxicare_part_qty_count`: Quantity count of parts covered by Maxicare.
+  * `parts_revenue_part_category_accessories`: Revenue from parts category accessories.
+  * `parts_revenue_part_category_consumables`: Revenue from parts category consumables.
+  * `parts_revenue_part_category_parts`: Revenue from parts category parts.
+  * `oem_accesories_ancillary_income_basic_amount`: Basic amount for OEM accessories ancillary income.
+  * `oem_accesories_ancillary_income_discount_amount`: Discount amount for OEM accessories ancillary income.
+  * `oem_accesories_ancillary_income_tax_amount`: Tax amount for OEM accessories ancillary income.
+  * `oem_accesories_ancillary_income_total_amount`: Total amount for OEM accessories ancillary income.
+  * `oem_spare_customer_paid_spare_basic_amount`: Basic amount for OEM spare parts paid by the customer.
+  * `oem_spare_customer_paid_spare_discount_amount`: Discount amount for OEM spare parts paid by the customer.
+  * `oem_spare_customer_paid_spare_tax_amount`: Tax amount for OEM spare parts paid by the customer.
+  * `oem_spare_customer_paid_spare_total_amount`: Total amount for OEM spare parts paid by the customer.
+  * `oem_spare_insurance_spare_basic_amount`: Basic amount for OEM spare insurance spare parts.
+  * `oem_spare_insurance_spare_discount_amount`: Discount amount for OEM spare insurance spare parts.
+  * `oem_spare_insurance_spare_tax_amount`: Tax amount for OEM spare insurance spare parts.
+  * `oem_spare_insurance_spare_total_amount`: Total amount for OEM spare insurance spare parts.
+  * `maxicare_labor_count`: Count of labor hours covered by Maxicare.
+  * `maxicare_labor_discount_amnt`: Discount amount for labor covered by Maxicare.
+  * `maxicare_labor_tax_amnt`: Tax amount for Maxicare labor.
+  * `maxicare_total_labor_amnt`: Total labor amount covered by Maxicare.
+  * `non_maxicare_total_labor_amnt`: Total labor amount not covered by Maxicare.
+  * `div_key`: Division key.
+  * `reg_numbr`: Registration number of the vehicle.
+  * `ro_remrks`: Remarks related to the repair order.
+  * `part_dtl_joined_flag`: Indicates if part details are joined.
+  * `bay_type`: Type of service bay.
+  * `bay_actv_ind`: Indicates if the service bay is active.
+  * `appl_to`: Applied to field.
+  * `warranty_ageing_ro`: Warranty ageing related to the repair order.
+  * `warranty_ageing_tday`: Warranty ageing in days.
+  * `servc_type_desc`: Description of the service type.
+  * `serv_catgry_desc`: Description of the service category.
+  * `invc_diff`: Invoice difference.
+  * `ro_hour_diff`: Difference in hours related to the repair order.
+  * `labr_basc`: Basic labor.
+  * `tat_1`: Turnaround time 1.
+  * `labr_basc_dtl`: Basic labor detail.
+  * `closd_date`: Date the repair order was closed.
+  * `tat_rnk`: Turnaround time rank.
+  * `modl_colr_key`: Model color key.
+  * `ro_source_name`: Name of the repair order source.
+  * `service_type_name`: Name of the service type.
+  * `repair_order_same_day_delay_reason`: Reason for same day delay in repair order.
+  * `estimation_variation_reason`: Reason for estimation variation.
+  * `repair_order_cancel_reason`: Reason for repair order cancellation.
+  * `repair_order_delay_reason`: Reason for repair order delay.
+  * `pendency_reason`: Reason for pendency.
+  * `time_revision_approval_reason`: Reason for time revision approval.
+  * `cost_revision_approval_reason`: Reason for cost revision approval.
+  * `pickup_type_name`: Name of the pickup type.
+  * `drop_type_name`: Name of the drop type.
+  * `ro_doc_type_name`: Name of the repair order document type.
+  * `bill_type_name`: Name of the bill type.
+  * `service_campaign_type_name`: Name of the service campaign type.
+  * `tech_employee_name`: Name of the technician employee.
+  * `product_division_name`: Name of the product division.
+  * `taxi_indicator`: Indicates if the vehicle is a taxi.
+  * `service_group`: Service group.
+  * `bay_type_name`: Name of the service bay type.
+  * `revist_flag`: Indicates if it is a revisit.
+  * `repeat_repair_flag`: Indicates if it is a repeat repair.
+  * `mdp_created_dt`: Timestamp when the MDP record was created.
+  * `mdp_job_id`: Identifier for the MDP job.
+  * `mdp_business_date`: Business date for MDP.
+
+  **Table: `ddp_service_retention`**
+  * `retail_date`: Date of retail transaction.
+  * `service_date`: Date when the service was performed.
+  * `div_key`: Division key.
+  * `product_key`: Unique identifier for the product.
+  * `serv_catgry_desc`: Description of the service category.
+  * `servc_catgry`: Category of the service performed.
+  * `parts_basc_amnt`: Basic amount for parts used in the service.
+  * `labr_basc_dtl`: Basic labor details for the service.
+  * `sal_zone_name`: Name of the sales zone.
+  * `sal_area_name`: Name of the sales area.
+  * `SAL_PARNT_GROP`: Parent group of the sales location.
+  * `srv_zone_name`: Name of the service zone.
+  * `srv_area_ofce`: Service area office location.
+  * `srv_parnt_grop`: Parent group of the service location.
+  * `chas_numbr`: Chassis number of the vehicle.
+  * `sv_ro_hdr_sk`: Service repair order header surrogate key.
+  * `orgnl_warrnty_expry_date`: Original warranty expiration date.
+  * `servc_type`: Type of service performed.
+  * `family_cd`: Code of the product family.
+  * `family_desc`: Description of the product family.
+  * `mdp_created_dt`: Timestamp when the record was created in the system.
+  * `mdp_job_id`: Unique identifier for the job.
+  * `mdp_business_date`: Business date associated with the record.
+
+  **Table: `verbatim_cmm`**
+  * `ro_number`: Repair order number.
+  * `ro_open_dt`: Date when the repair order was opened.
+  * `sv_ro_hdr_sk`: Surrogate key for the service repair order header.
+  * `parnt_grop`: Parent group associated with the verbatim.
+  * `location_code`: Code identifying the service location.
+  * `demanded_verbatim`: The verbatim comment provided by the customer.
+  * `verbatim_group`: Group to which the verbatim comment belongs.
+  * `verbatim_code`: Code associated with the customer's verbatim comment.
+  * `cust_verbtm_desc`: Description of the customer's verbatim comment.
+  * `verbatim_group_desc`: Description of the verbatim group.
+  * `vin`: Vehicle Identification Number.
+  * `registration_number`: Vehicle registration number.
+  * `vehicle_sale_date`: Date when the vehicle was sold.
+  * `customer_id`: Unique identifier for the customer.
+  * `servc_type`: Type of service performed on the vehicle.
+  * `Priority_verbatim_flag`: Flag indicating if the verbatim comment is of high priority.
+
+  **Table: `ddp_ad_ai_final_dimension`**
+  * `segmnt_cd`: Code for the segment.
+  * `bu`: Business Unit code.
+  * `delr_name_srv`: Name of the dealer for service.
+  * `delr_email_sal`: Email address for dealer sales.
+  * `delr_mobl_sal`: Mobile number for dealer sales.
+  * `delr_name_sal`: Name of the dealer for sales.
+  * `zonl_head_srv`: Name of the zonal head for service.
+  * `vp_srv`: Code for the Vice President of Service.
+  * `vp_sal`: Code for the Vice President of Sales.
+  * `delr_actv_ind`: Indicator for dealer activity.
+  * `sals_orgnztn`: Sales organization code.
+  * `prodct_divsn`: Code for the product division.
+  * `compny_name`: Name of the company.
+  * `compny_cd`: Code for the company.
+  * `city_cd`: Code for the city.
+  * `batch_pickd_flag`: Flag indicating if the location was picked in a batch.
+  * `batch_pickd_date`: Date when the location was picked in a batch.
+  * `area_ofce`: Code for the area office.
+  * `actv_ind`: Indicator for active status.
+  * `acc_loctn_ind`: Indicator for accountable location.
+  * `longitude`: Longitude coordinate of the location.
+  * `latitude`: Latitude coordinate of the location.
+  * `dp_mob_no`: Mobile number for the dealer point.
+  * `dp_land_no`: Landline number for the dealer point.
+  * `dp_land_code`: Landline code for the dealer point.
+  * `dp_email_id`: Email ID for the dealer point.
+  * `me_ccm`: Code for the ME CCM.
+  * `me_asm`: Code for the ME ASM.
+  * `delr_serv_email`: Email address for dealer service.
+  * `delr_serv_contct`: Contact number for dealer service.
+  * `delr_sals_email`: Email address for dealer sales.
+  * `delr_sals_contct`: Contact number for dealer sales.
+  * `escaltd_cccf`: Code for the escalated CCCF.
+  * `onlin_bookng`: Indicator for online booking.
+  * `delr_disply_ind`: Indicator for dealer display.
+  * `disply_city`: City for display purposes.
+  * `distrbtn_chanl2`: Second distribution channel code.
+  * `distrbtn_chanl1`: First distribution channel code.
+  * `ro_type`: Type of Retail Outlet.
+  * `csp`: Code for the Customer Service Provider.
+  * `ssp`: Code for the Sub-Sales Person.
+  * `loctn_catgry`: Category of the location.
+  * `alt_de_loctn_cd`: Alternate location code for the dealer.
+  * `co_ccm`: Code for the CO CCM.
+  * `update_flag`: Flag indicating if the record was updated.
+  * `dy_rsm`: Code for the DY RSM.
+  * `dy_rccm`: Code for the DY RCCM.
+  * `last_updt_date`: Date of the last update.
+  * `pric_city_cd`: Code for the principal city of the location.
+  * `ea_zm_srv`: Code for the Area Zonal Manager for service.
+  * `ea_zm_sal`: Code for the Area Zonal Manager for sales.
+  * `payr_cd`: Code for the payer.
+  * `delr_email_srv`: Email address for dealer service.
+  * `delr_mobl_srv`: Mobile number for dealer service.
+  * `modfd_date`: Date when the record was modified.
+  * `modfd_by`: User who modified the record.
+  * `cretd_date`: Date when the record was created.
+  * `cretd_by`: User who created the record.
+  * `zonl_head`: Code for the zonal head.
+  * `zone`: Zone code.
+  * `unldng_pont`: Code for the unloading point.
+  * `stat_cd`: Code for the state.
+  * `srv_loctn_ind`: Indicator for service location.
+  * `srv_engnr`: Code for the service engineer.
+  * `sprs_loctn_ind`: Indicator for the superseding location.
+  * `sale_loctn_ind`: Indicator for sales location.
+  * `sal_ofcr`: Code for the Sales Officer.
+  * `rsm`: Code for the Regional Sales Manager.
+  * `regn_cd`: Code for the region.
+  * `rccm`: Code for the Regional Customer Care Manager.
+  * `parnt_grop`: Code for the parent group.
+  * `ordrng_spr_loctn`: Code for the ordering superseding location.
+  * `ordrng_sal_loctn`: Code for the ordering sales location.
+  * `loctn_pin_cd`: PIN code of the location.
+  * `loctn_name`: Name of the location.
+  * `loctn_cd`: Code for the location.
+  * `loctn_adrs`: Address of the location.
+  * `locty`: Locality of the location.
+  * `distrbtn_chanl`: Distribution channel code.
+  * `deltd_date`: Date when the record was deleted.
+  * `delr_type`: Type of dealer.
+  * `delr_tin`: Tax Identification Number for the dealer.
+  * `delr_tan`: Tax Account Number for the dealer.
+  * `delr_name`: Name of the dealer.
+  * `delr_cst_numbr`: Customer number for the dealer.
+  * `delr_cd`: Code for the dealer.
+  * `rn`: Row number.
+  * `area_name`: Name of the area.
+  * `zone_name`: Name of the zone.
+  * `asm_name`: Name of the Area Sales Manager.
+  * `ccm_name`: Name of the Customer Care Manager.
+  * `rsm_name`: Name of the Regional Sales Manager.
+  * `rccm_name`: Name of the Regional Customer Care Manager.
+  * `zonal_head_sales`: Code for the zonal head in charge of sales.
+  * `zonal_head_cc`: Code for the zonal head in charge of credit control.
+  * `mdp_created_dt`: Date when the record was created in MDP.
+  * `mdp_job_id`: Job ID associated with the MDP process.
+  * `mdp_business_date`: Business date associated with the MDP process.
+
+  **Table: `erp_tbl_s4hana_zapo_matcategory`**
+  * `mandt`: Client ID.
+  * `vkorg`: Sales organization.
+  * `vtweg`: Distribution channel.
+  * `spart`: Division of the material.
+  * `matnr`: Material number.
+  * `charg`: Batch number of the material.
+  * `category`: Category of the material.
+  * `ztrim_lvl`: Trim level of the material.
+  * `zseating`: Seating type of the material.
+  * `zstatus`: Status of the material.
+  * `descrip`: Description of the material.
+  * `matkl`: Material group.
+  * `colour`: Colour of the material.
+  * `zengine`: Engine type of the material.
+  * `zdrive`: Drive type of the material.
+  * `subgrp`: Subgroup of the material.
+  * `zfuel`: Fuel type of the material.
+  * `zsterring`: Steering type of the material.
+  * `ztrim_level`: Trim level of the material.
+  * `trans`: Transmission type of the material.
+  * `market`: Market of the material.
+  * `console`: Console type of the material.
+  * `theme`: Theme of the material.
+  * `bezel`: Bezel type of the material.
+  * `fog`: Fog lamp type of the material.
+  * `brakes`: Brakes type of the material.
+  * `emission`: Emission type of the material.
+  * `stock`: Stock indicator.
+  * `zmrp_type`: MRP type of the material.
+  * `zac`: Air conditioning type of the material.
+  * `zpowerwindow`: Power window type of the material.
+  * `zairbag`: Airbag type of the material.
+  * `zabs`: ABS type of the material.
+  * `zbody`: Body type of the material.
+  * `zvalve`: Valve type of the material.
+  * `mvgr4`: Material group 4.
+  * `siamgrp`: SIAM group of the material.
+  * `submarket`: Submarket of the material.
+  * `gearbox`: Gearbox type of the material.
+  * `gbtype`: Grouping type of the material.
+  * `transfercase`: Transfer case type of the material.
+  * `axle`: Axle type of the material.
+  * `hypoid_ratio`: Hypoid ratio of the material.
+  * `edcm`: Electronic damping control module type.
+  * `prod_seg_cd`: Product segment code of the material.
+  * `veh_type`: Vehicle type of the material.
+  * `mfg_plant`: Manufacturing plant of the material.
+  * `zengine_subgrp`: Engine subgroup of the material.
+  * `erdat`: Date when the material was created.
+  * `ernam`: Name of the user who created the material.
+  * `aedat`: Date when the material was last changed.
+  * `aenam`: Name of the user who last changed the material.
+  * `ntgew`: Net weight of the material.
+  * `brgew`: Gross weight of the material.
+  * `gewei`: Weight unit of the material.
+  * `modl_cd`: Model code of the material.
+  * `subgrpcd`: Subgroup code of the material.
+  * `maktx`: Material description.
+  * `matcat`: Material category.
+  * `matsubcat`: Material subcategory.
+  * `prcat`: Price category.
+  * `siam_segment_ibp`: SIAM segment for IBP planning.
+  * `siam_category_ibp`: SIAM category for IBP planning.
+  * `engine_family_ibp`: Engine family for IBP planning.
+  * `transmission_family_ibp`: Transmission family for IBP planning.
+  * `prod_active`: Indicates if the product is active.
+  * `dlr_plan_active`: Indicates if the DLR plan is active.
+  * `ho_plan_active`: Indicates if the HO plan is active.
+  * `old_model_code`: Old model code of the material.
+  * `createdate`: Date when the record was created.
+  * `lastupdatetime`: Timestamp when the record was last updated.
+  * `workflowid`: Identifier for the workflow associated with the material.
+  * `workflowrunid`: Identifier for the workflow run.
+  * `rowactiveflag`: Indicates if the row is active.
+  * `rowdeleteflag`: Indicates if the row is deleted.
+  * `mdp_created_dt`: Timestamp when the record was created in MDP.
+  * `mdp_job_id`: Job ID for MDP.
+  * `mdp_business_date`: Business date for MDP.
 
 critical_joining_logic_and_context: |
   ### CRITICAL JOINING LOGIC & CONTEXT
 
   * **Join Strategy:**
-      * Primary: Use join relationships from Dataplex Aspect when available
-      * Fallback: If Aspect information is unavailable, infer joins based on:
+      * **Primary Source (Knowledge Graph):** First, you **MUST** use the relationships defined in the `knowledge_graph` section. These LLM-inferred joins are the highest priority source for determining how to connect tables.
+      * **Secondary Source (Dataplex):** If a required join is not explicitly defined in the `knowledge_graph`, use join relationships from Dataplex Aspect when available.
+      * **Fallback (Inference):** If neither the knowledge graph nor Dataplex Aspect provides the necessary join, infer joins based on:
           * Common column naming patterns (e.g., identical names like `MODEM_ID_MASKED`)
           * Column descriptions
           * Data types
@@ -126,127 +680,1480 @@ sample_data: |
   ### Sample Data
 
   * **Structure of Provided Sample Data:**
-      (This section might be empty or state "Sample data is not available..." if it was not fetched, e.g., if Data Profiles were available, or if DDLs were missing.)
-      If data profiles are unavailable, sample data might be provided for some tables. This will be a list, where each item corresponds to a table and contains:
-      * `'table_name'`: The fully qualified name of the table.
-      * `'sample_rows'`: A list of dictionaries, where each dictionary represents a row, with column names as keys and actual data values. Typically, the first 5 rows are shown.
+      Sample data is provided for key tables to illustrate data formats and relationships. Each item corresponds to a table and contains a list of sample rows.
 
   * **Sample Data Utilization Strategy:**
-      * **Consult if Data Profiles are Missing/Insufficient:** If the Data Profile Information section above is sparse, unavailable, or doesn't provide enough detail for a specific column's likely values, use this Sample Data section.
-      * **Understand Actual Data Values:** Look at the `sample_rows` for relevant tables to see concrete examples of data stored in each column. This is particularly useful for understanding the format of `STRING`, `DATE`, `TIMESTAMP` values, or to see typical categorical values.
-      * **Inform Value-Based Filtering:** If a user's query involves filtering by specific values (e.g., "customers in 'Selangor'"), check the sample data for the relevant column (e.g., a `state` or `region` column) to see if 'Selangor' is a plausible value and what its typical casing/format is.
-      * **Aid in Clarification (Step 3):** If a user's query is ambiguous about specific values, use sample data to show examples. For instance, "Are you looking for `status = 'ACTIVE'` or `status = 'Active'`? Sample data shows the `status` column typically contains 'ACTIVE'."
-      * **Do Not Assume Completeness:** Sample data shows only a few rows and may not represent all possible values or the full distribution of data. Use it for examples, not for statistical inference.
+        Use this sample data to understand data formats, plausible values, and the critical relationships between tables before writing a query.
+        * **Understand Joins and Relationships:** The sample data is designed to show how tables connect. For example:
+            * The value `sv_ro_hdr_sk: 81684529` in `ddp_service_cmm_kpis` can be used to find the corresponding labor detail in `cdp_labr_cmn`.
+            * The `modl_cd` in `ddp_service_cmm_kpis` links to the `modl_cd` in `ddp_dim_srv_mst_model_master` to get the vehicle's description.
+            * The `loctn_cd` in a KPI record links to the `loctn_cd` in `ddp_ad_ai_final_dimension` to get details about the service location.
+            * Notice that a single `sv_ro_hdr_sk` can have multiple entries in `cdp_part_cmn`, demonstrating the one-to-many relationship between a repair order and its parts.
+        * **Inform Value-Based Filtering:** Look at the sample rows to find realistic values for `WHERE` clauses. For instance, you can see plausible values like `segmnt_cd = 'PERSONAL'`, `labour_type_name = 'OEM Defined'`, or `ro_stats = 'CAN'`.
+        * **Clarify Ambiguities:** Use the sample data to understand the format of data. For example, `ro_date` is a full timestamp (`YYYY-MM-DD HH:MM:SS`), while `ro_month` is just the date (`YYYY-MM-DD`). Flags like `oem_part_ind` use 'Y' or 'N'.
+        * **Do Not Assume Completeness:** Remember that sample data shows only a few rows and may not represent all possible values or the full distribution of data. Use it for examples and understanding structure, not for statistical inference.
+        
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.cdp_labr_cmn'
+    sample_rows:
+    - ro_date: '2024-12-28 09:16:54'
+      sv_ro_hdr_sk: 81684529
+      sv_ro_bill_hdr_sk: 86365127
+      parnt_grop: 'JN01'
+      locatn_cd: 'JN02'
+      sv_ro_bill_labr_dtl_sk: 270823410
+      ro_month: '2024-12-01'
+      veh_registration_no: 'TN73L1235'
+      vin: 'MA1VA2RBCG6B93119'
+      customerId: 'C162568850'
+      vehicleModels: 'K6 PLUS P'
+      numberOfMahindraVehicles: 0
+      odmtr_redng: 47587
+      segmnt_cd: 'PERSONAL'
+      modl_grop_cd: 'KUV1'
+      prodct_divsn: 'S0'
+      labr_bilbl_type: 'C'
+      standrd_hrs: 1
+      labr_type: 'OEM'
+      labr_grop: 'MCT'
+      sv_labr_mst_sk: 568587836
+      labr_code: 'MC073MM'
+      labr_desc: 'Maxicare Premium Exterior Protection System'
+      labr_tax: 320.18
+      labrAmount: 1778.81
+      labr_rate: 0
+      stdhrs: 1
+      labr_discnt_amnt: 0
+      labr_totl_amnt: 2098.99
+      totalBillAmount: 13048
+      labour_billable_type_name: 'Customer Paid'
+      labour_type_name: 'OEM Defined'
+      labour_group_name: 'MCT-734'
+    - ro_date: '2024-11-15 11:25:10'
+      sv_ro_hdr_sk: 81684530
+      sv_ro_bill_hdr_sk: 86365128
+      parnt_grop: 'MH01'
+      locatn_cd: 'MH04'
+      sv_ro_bill_labr_dtl_sk: 270823411
+      ro_month: '2024-11-01'
+      veh_registration_no: 'MH12AB1234'
+      vin: 'MA1XYZABC1D345678'
+      customerId: 'C162568851'
+      vehicleModels: 'XUV700 AX7'
+      numberOfMahindraVehicles: 1
+      odmtr_redng: 15200
+      segmnt_cd: 'PERSONAL'
+      modl_grop_cd: 'XUV7'
+      prodct_divsn: 'S0'
+      labr_bilbl_type: 'P'
+      standrd_hrs: 2
+      labr_type: 'PMS'
+      labr_grop: 'PMS'
+      sv_labr_mst_sk: 568587837
+      labr_code: 'L-PMS20K'
+      labr_desc: 'Periodic Maintenance Service 20000km'
+      labr_tax: 450.00
+      labrAmount: 2500.00
+      labr_rate: 1250
+      stdhrs: 2
+      labr_discnt_amnt: 100
+      labr_totl_amnt: 2850.00
+      totalBillAmount: 8500
+      labour_billable_type_name: 'Customer Paid'
+      labour_type_name: 'Periodic Maintenance'
+      labour_group_name: 'PMS-GR1'
 
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.cdp_part_cmn'
+    sample_rows:
+    - part_catgry_cd: 'M'
+      part_billbl_type: 'C'
+      oem_part_ind: 'Y'
+      pa_part_loctn_mst_sk: 137496278
+      discnt_type: '%'
+      mfg_cd: 'MAL'
+      uom_cd: 'EA'
+      part_prodct_divsn: '11'
+      abc_ind: 'C1'
+      hml_ind: 'M'
+      landed_cost: 653.49
+      ris_ind: 'R'
+      purchs_pric: 679.58
+      selng_pric: 903.39
+      mrp: 1025
+      hsn: 27101980
+      net_delr_pric: 602.72
+      part_type: '7'
+      discnt_rate: 3.5
+      gndp: 653.44
+      ndp: 579.53
+      bill_share: 100
+      totalBillAmount: 155000
+      part_category_description: 'Spares'
+      part_billable_type_name: 'Customer Paid'
+      discount_type_name: '%'
+      ro_date: '2024-10-31 09:05:38'
+      sv_ro_hdr_sk: 80371280
+      sv_ro_bill_hdr_sk: 85408625
+      parnt_grop: 'KA001'
+      loctn_cd: 'KA06'
+      sv_ro_bill_part_dtl_sk: 464331584
+      ro_month: '2024-10-01'
+      veh_registration_no: 'DL9CAR8880'
+      vin: 'MA1PD4PCGJ6J45663'
+      customerId: 'C190434348'
+      vehicleModels: '4WD'
+      numberOfMahindraVehicles: 0
+      odmtr_redng: 65570
+      segmnt_cd: 'PERSONAL'
+      modl_grop_cd: 'ALTS'
+      prodct_divsn: 'AL'
+      part_code: '000000671'
+      part_desc: 'OIL-T/M (1L) DC TA/T'
+      part_quantity: 9
+      part_rate: 868.64
+      partAmount: 7817.76
+      part_tax: 1357.94
+      part_discnt_amnt: 273.62
+      part_totl_amnt: 8902.08
+    - part_catgry_cd: 'M'
+      part_billbl_type: 'C'
+      oem_part_ind: 'Y'
+      pa_part_loctn_mst_sk: 152574233
+      discnt_type: '%'
+      mfg_cd: 'MAL'
+      uom_cd: 'EA'
+      part_prodct_divsn: '11'
+      abc_ind: 'B'
+      hml_ind: 'M'
+      landed_cost: 653.45
+      ris_ind: 'R'
+      purchs_pric: 679.58
+      selng_pric: 903.39
+      mrp: 1025
+      hsn: 27101980
+      net_delr_pric: 602.72
+      part_type: '7'
+      discnt_rate: 5
+      gndp: 653.44
+      ndp: 579.53
+      bill_share: 100
+      totalBillAmount: 30591
+      part_category_description: 'Spares'
+      part_billable_type_name: 'Customer Paid'
+      discount_type_name: '%'
+      ro_date: '2024-11-14 14:25:22'
+      sv_ro_hdr_sk: 80880710
+      sv_ro_bill_hdr_sk: 85229907
+      parnt_grop: 'KA001'
+      loctn_cd: 'KA21'
+      sv_ro_bill_part_dtl_sk: 463498366
+      ro_month: '2024-11-01'
+      veh_registration_no: 'CH01CK3060'
+      vin: 'MA1NW4PDGN6E88582'
+      customerId: 'C230032858'
+      vehicleModels: '4WD BS6'
+      numberOfMahindraVehicles: 0
+      odmtr_redng: 71401
+      segmnt_cd: 'PERSONAL'
+      modl_grop_cd: 'ALTS'
+      prodct_divsn: 'AL'
+      part_code: '000000671'
+      part_desc: 'OIL-T/M (1L) DC TA/T'
+      part_quantity: 9
+      part_rate: 868.64
+      partAmount: 7817.76
+      part_tax: 1336.84
+      part_discnt_amnt: 390.89
+      part_totl_amnt: 8763.71
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master'
+      sample_rows:
+      - modl_cd: 'UPPIMC075017868799'
+        modl_desc: 'VEERO 1.4XXL CBC V2 CNG'
+        modl_grop_cd: 'UPP'
+        varnt_cd: 'M0750'
+        seat_capcty: 3
+        modl_invc_desc: 'VEERO 1.4XXL CBC V2 CNG'
+        famly_cd: 'J57'
+        colr_cd: 'C1POLRWHT'
+        prodct_divsn: 'PP'
+        batch: 'POLAR WHITE'
+        oem_modl_cd: 'G2C4EBCSXB3C1A01WT'
+        sal_modl_grop: 'UPP'
+        modl_grop_ordr_by: 28
+        segmnt_cd: 'COMMERCIAL'
+        varnt_desc: '1.4XXL CBC V2 CNG'
+        famly_desc: 'VEERO CNG'
+        actv_ind: 'Y'
+        modl_grop_desc: 'VEERO'
+        fuel_type: 'CNG'
+        emission: 'BS6'
+        driv: '2WD'
+        trim_levl: '1.4XXL CBC V2 CNG'
+        transmission: 'MANUAL'
+        mdp_created_dt: '2025-09-08 00:41:55'
+        mdp_job_id: 'mda_s_g_ddp_dim_srv_mst_model_master_20250908060800'
+        mdp_business_date: '2025-09-07'
+      - modl_cd: 'UPPIMC056917700683'
+        modl_desc: 'VEERO 1.4XXL SD V2 CNG'
+        modl_grop_cd: 'UPP'
+        varnt_cd: 'M0569'
+        seat_capcty: 3
+        modl_invc_desc: 'VEERO 1.4XXL SD V2 CNG'
+        famly_cd: 'J57'
+        colr_cd: 'C1POLRWHT'
+        prodct_divsn: 'PP'
+        batch: 'POLAR WHITE'
+        oem_modl_cd: 'G2C4EBCSXB3F1A01WT'
+        sal_modl_grop: 'UPP'
+        modl_grop_ordr_by: 28
+        segmnt_cd: 'COMMERCIAL'
+        varnt_desc: '1.4XXL SD V2 CNG'
+        famly_desc: 'VEERO CNG'
+        actv_ind: 'Y'
+        modl_grop_desc: 'VEERO'
+        fuel_type: 'CNG'
+        emission: 'BS6'
+        driv: '2WD'
+        trim_levl: '1.4XXL SD V2 CNG'
+        transmission: 'MANUAL'
+        mdp_created_dt: '2025-09-08 00:41:55'
+        mdp_job_id: 'mda_s_g_ddp_dim_srv_mst_model_master_20250908060800'
+        mdp_business_date: '2025-09-07'
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_part_master'
+      sample_rows:
+      - PA_PART_LOCTN_MST_SK: 177582556
+        PART_NUMBR: '0052096'
+        PART_DESC: 'PROP SHAFT ASSY'
+        PART_PRODCT_DIVSN: '11'
+        ABC_IND: null
+        HML_IND: null
+        RIS_IND: null
+        PART_CATGRY_CD: 'M'
+        OEM_PART_IND: 'Y'
+        PART_CATGRY_DESC: 'Spares'
+        link_Dealer: 'RTN1RT01'
+        Part_Category_Type: 'PART'
+        Part_Div_DESC: '11-UV & Common Spares'
+        Maxicare_Flag: null
+        SKU_WSE_KL_QTY: 0
+      - PA_PART_LOCTN_MST_SK: 178762109
+        PART_NUMBR: 'S0117C000251N'
+        PART_DESC: 'SEAL BLINDER CPL RH'
+        PART_PRODCT_DIVSN: '11'
+        ABC_IND: null
+        HML_IND: null
+        RIS_IND: null
+        PART_CATGRY_CD: 'M'
+        OEM_PART_IND: 'Y'
+        PART_CATGRY_DESC: 'Spares'
+        link_Dealer: 'JS4W1JSW1'
+        Part_Category_Type: 'PART'
+        Part_Div_DESC: '11-UV & Common Spares'
+        Maxicare_Flag: null
+        SKU_WSE_KL_QTY: 0
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis'
+      sample_rows:
+      - accesories_flag: null
+        accessories_part_amount_at_gndp: 0
+        accessories_part_amount_at_mrp: 0
+        ageing_bucket: 520
+        appl_to: null
+        arrived_date_for_eligibility: '2032-03-22'
+        bay_actv_ind: null
+        bay_cd: null
+        bay_type: null
+        bay_type_name: null
+        bill_date: null
+        bill_datetime: null
+        bill_type: null
+        bill_type_name: null
+        brought_by_name: null
+        cancl_date: '2024-04-05'
+        cea_flag: 0
+        chas_numbr: 'R6B03633'
+        closd_date: null
+        colr_cd: 'C1NPOLBLCK'
+        cost_rev_apprvl_resn_cd: null
+        cost_revision_approval_reason: null
+        cretd_from: 'TAB'
+        dely_resn_cd: null
+        div_key: 'AUTW1ATW6'
+        doc_amnt: 0
+        doc_stats: null
+        drop_by: null
+        drop_type: 'C'
+        drop_type_name: 'Customer refused'
+        eligible_vehicle_flag: 'Eligible Vehicle'
+        estimation_variation_reason: null
+        estmt_warnc_resn_cd: null
+        exprs_servc_ind: 'Y'
+        flag_mtraq: 1
+        govt_vehcl: 'N'
+        invc_diff: 20
+        key: 'AUTW1ATW6PERSONAL'
+        key_acnt_segmnt: null
+        key_bay: null
+        key_emp: 'AUTW1ATW61AAN8S84'
+        labr_basc: 0
+        labr_basc_amnt: 0
+        labr_basc_dtl: 0
+        labr_charg_amnt: null
+        labr_totl_amnt: 0
+        local_spares_customer_paid_spare_basic_amount: 0
+        local_spares_customer_paid_spare_discount_amount: 0
+        local_spares_customer_paid_spare_tax_amount: 0
+        local_spares_customer_paid_spare_total_amount: 0
+        local_spares_insurance_spare_basic_amount: 0
+        local_spares_insurance_spare_discount_amount: 0
+        local_spares_insurance_spare_tax_amount: 0
+        local_spares_insurance_spare_total_amount: 0
+        loctn_cd: 'ATW6'
+        m1_m2_m3_m4: 'M1'
+        max_to_days_frm_dos: 2924
+        maxicare_basic_labor_amnt: 0
+        maxicare_basic_parts_amnt: 0
+        maxicare_discount_parts_amnt: 0
+        maxicare_labor_count: 0
+        maxicare_labor_discount_amnt: 0
+        maxicare_labor_tax_amnt: 0
+        maxicare_part_qty_count: 0
+        maxicare_parts_tax_amnt: 0
+        maxicare_total_labor_amnt: 0
+        maxicare_total_parts_amnt: 0
+        maximile_oils_and_consumables_basic_amnt: 0
+        maximile_oils_and_consumables_discount_amnt: 0
+        maximile_oils_and_consumables_tax_amnt: 0
+        maximile_oils_and_consumables_total_amnt: 0
+        mdp_business_date: '2025-09-07'
+        mdp_created_dt: '2025-09-08 00:49:42'
+        mdp_job_id: 'mda_s_g_ddp_service_cmm_kpis_20250908061631'
+        modl_cd: 'SCNMC032217183790'
+        modl_colr_key: 'AZ103BYGTTA4EA01XH|C1NPOLBLCK'
+        mrp: 0
+        ndp: 0
+        non_maxicare_total_labor_amnt: 0
+        odmtr_redng: 1049
+        oem_accesories_ancillary_income_basic_amount: 0
+        oem_accesories_ancillary_income_discount_amount: 0
+        oem_accesories_ancillary_income_tax_amount: 0
+        oem_accesories_ancillary_income_total_amount: 0
+        oem_modl_cd: 'AZ103BYGTTA4EA01XH'
+        oem_spare_customer_paid_spare_basic_amount: 0
+        oem_spare_customer_paid_spare_discount_amount: 0
+        oem_spare_customer_paid_spare_tax_amount: 0
+        oem_spare_customer_paid_spare_total_amount: 0
+        oem_spare_insurance_spare_basic_amount: 0
+        oem_spare_insurance_spare_discount_amount: 0
+        oem_spare_insurance_spare_tax_amount: 0
+        oem_spare_insurance_spare_total_amount: 0
+        online_paymnt_flg: null
+        orgnl_warrnty_expry_date: '2027-03-21'
+        orgnl_warrnty_expry_km: 999999
+        orgnl_warrnty_start_date: '2024-03-20'
+        paints_basic_amount: 0
+        paints_discount_amount: 0
+        paints_tax_amount: 0
+        paints_total_amount: 0
+        parnt_grop: 'AUTW1'
+        part_amount_at_gndp: 0
+        part_amount_at_mrp: 0
+        part_charg_amnt: null
+        part_dtl_joined_flag: 'N'
+        part_qty: 0
+        parts_basc_amnt: 0
+        parts_revenue_part_category_accessories: 0
+        parts_revenue_part_category_consumables: 0
+        parts_revenue_part_category_parts: 0
+        parts_totl_amnt: 0
+        party_cd: null
+        pendency_reason: null
+        pendncy_resn_cd: null
+        pickup_by: null
+        pickup_type: null
+        pickup_type_name: null
+        prodct_divsn: 'ZS'
+        promsd_delvry_date: '2024-04-05 17:00:00'
+        reg_numbr: 'RJ4UK2873'
+        repeat_repair_flag: null
+        rept_ro_ind: null
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_basic_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_discount_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_tax_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_total_amount: 0
+        revist_flag: null
+        revsd_promsd_delvry_date: null
+        revst_ind: 'N'
+        ro_24h_below: 0
+        ro_48h_below: 0
+        ro_72h_above: 0
+        ro_72h_below: 0
+        ro_bill_date: null
+        ro_cancl_date: '2024-04-05'
+        ro_cancl_resn_cd: 'RS'
+        ro_close_diff: null
+        ro_closed_date: null
+        ro_date: '2024-04-05'
+        ro_datetime: '2024-04-05 10:54:27'
+        ro_day_closed: null
+        ro_doc_type_name: null
+        ro_hour_diff: null
+        ro_id: 'R025R000148'
+        ro_key: 'R6B03633R025R000148'
+        ro_remrks: null
+        ro_sorc: 'W'
+        ro_source_name: 'Walk-In'
+        ro_stats: 'CAN'
+        rsa_expry_date: null
+        rsa_registartion_flag: 'RSA Not Registered'
+        rsa_regstrtn_stats: null
+        sa_emply_cd: '1AAN8S84'
+        sa_emply_name: 'MASOOM RAZA'
+        sa_feedbck_stats: null
+        same_day_dely_resn_cd: null
+        scheme_exp_date: '2028-03-21'
+        sdd_flag: 0
+        segmnt_cd: 'PERSONAL'
+        serv_catgry_desc: 'Free Service'
+        servc_type: 1
+        servc_type_desc: '1ST FREE SERVICE'
+        service_campaign_type_name: null
+        service_group: 'Mechanical'
+        service_type_name: '1ST FREE SERVICE'
+        shield_registration_flag: 'Shield Registered'
+        shield_validity_flag: 'Valid Shield'
+        spot_care_appl_fl: 'N'
+        srv_campgn_type: null
+        sv_apntmnt_hdr_sk: null
+        sv_ro_bill_hdr_sk: null
+        sv_ro_hdr_sk: 76105207
+        tat_1: null
+        tat_rnk: 1
+        taxi_indicator: 'NON TAXI'
+        taxi_nontx: 'NT'
+        tech_emply_cd: null
+        time_rev_apprvl_resn_cd: null
+        time_revision_approval_reason: null
+        valid_to: '9999-12-31'
+        vehcl_toe_ind: null
+        vehicle_brought_by: null
+        vin: 'MATJ2YGTR6B03633'
+        warranty_ageing_ro: 16
+        warranty_ageing_tday: 536
+        warranty_flag: 'Warranty'
+        repair_order_cancel_reason: 'RO open with incorrect Service type'
+        repair_order_delay_reason: null
+        repair_order_same_day_delay_reason: null
+      - accesories_flag: null
+        accessories_part_amount_at_gndp: 0
+        accessories_part_amount_at_mrp: 0
+        ageing_bucket: 335
+        appl_to: null
+        arrived_date_for_eligibility: '2032-08-11'
+        bay_actv_ind: null
+        bay_cd: null
+        bay_type: null
+        bay_type_name: null
+        bill_date: null
+        bill_datetime: null
+        bill_type: null
+        bill_type_name: null
+        brought_by_name: null
+        cancl_date: '2024-10-07'
+        cea_flag: 0
+        chas_numbr: 'R2G73725'
+        closd_date: null
+        colr_cd: 'A3EVRSTWHT'
+        cost_rev_apprvl_resn_cd: null
+        cost_revision_approval_reason: null
+        cretd_from: 'TAB'
+        dely_resn_cd: null
+        div_key: 'KRM01KRM5'
+        doc_amnt: 0
+        doc_stats: null
+        drop_by: null
+        drop_type: 'C'
+        drop_type_name: 'Customer refused'
+        eligible_vehicle_flag: 'Eligible Vehicle'
+        estimation_variation_reason: null
+        estmt_warnc_resn_cd: null
+        exprs_servc_ind: 'N'
+        flag_mtraq: 1
+        govt_vehcl: 'N'
+        invc_diff: 68
+        key: 'KRM01KRM5PERSONAL'
+        key_acnt_segmnt: null
+        key_bay: null
+        key_emp: 'KRM01KRM51AAC34311'
+        labr_basc: 0
+        labr_basc_amnt: 0
+        labr_basc_dtl: 0
+        labr_charg_amnt: null
+        labr_totl_amnt: 0
+        local_spares_customer_paid_spare_basic_amount: 0
+        local_spares_customer_paid_spare_discount_amount: 0
+        local_spares_customer_paid_spare_tax_amount: 0
+        local_spares_customer_paid_spare_total_amount: 0
+        local_spares_insurance_spare_basic_amount: 0
+        local_spares_insurance_spare_discount_amount: 0
+        local_spares_insurance_spare_tax_amount: 0
+        local_spares_insurance_spare_total_amount: 0
+        loctn_cd: 'KRM5'
+        m1_m2_m3_m4: 'M1'
+        max_to_days_frm_dos: 2924
+        maxicare_basic_labor_amnt: 0
+        maxicare_basic_parts_amnt: 0
+        maxicare_discount_parts_amnt: 0
+        maxicare_labor_count: 0
+        maxicare_labor_discount_amnt: 0
+        maxicare_labor_tax_amnt: 0
+        maxicare_part_qty_count: 0
+        maxicare_parts_tax_amnt: 0
+        maxicare_total_labor_amnt: 0
+        maxicare_total_parts_amnt: 0
+        maximile_oils_and_consumables_basic_amnt: 0
+        maximile_oils_and_consumables_discount_amnt: 0
+        maximile_oils_and_consumables_tax_amnt: 0
+        maximile_oils_and_consumables_total_amnt: 0
+        mdp_business_date: '2025-09-07'
+        mdp_created_dt: '2025-09-08 00:49:42'
+        mdp_job_id: 'mda_s_g_ddp_service_cmm_kpis_20250908061631'
+        modl_cd: 'X3XDM043217522805'
+        modl_colr_key: 'AS22JPNW5TP03C00WQ|A3EVRSTWHT'
+        mrp: 0
+        ndp: 0
+        non_maxicare_total_labor_amnt: 0
+        odmtr_redng: 2038
+        oem_accesories_ancillary_income_basic_amount: 0
+        oem_accesories_ancillary_income_discount_amount: 0
+        oem_accesories_ancillary_income_tax_amount: 0
+        oem_accesories_ancillary_income_total_amount: 0
+        oem_modl_cd: 'AS22JPNW5TP03C00WQ'
+        oem_spare_customer_paid_spare_basic_amount: 0
+        oem_spare_customer_paid_spare_discount_amount: 0
+        oem_spare_customer_paid_spare_tax_amount: 0
+        oem_spare_customer_paid_spare_total_amount: 0
+        oem_spare_insurance_spare_basic_amount: 0
+        oem_spare_insurance_spare_discount_amount: 0
+        oem_spare_insurance_spare_tax_amount: 0
+        oem_spare_insurance_spare_total_amount: 0
+        online_paymnt_flg: null
+        orgnl_warrnty_expry_date: '2027-08-10'
+        orgnl_warrnty_expry_km: 999999
+        orgnl_warrnty_start_date: '2024-08-09'
+        paints_basic_amount: 0
+        paints_discount_amount: 0
+        paints_tax_amount: 0
+        paints_total_amount: 0
+        parnt_grop: 'KRM01'
+        part_amount_at_gndp: 0
+        part_amount_at_mrp: 0
+        part_charg_amnt: null
+        part_dtl_joined_flag: 'N'
+        part_qty: 0
+        parts_basc_amnt: 0
+        parts_revenue_part_category_accessories: 0
+        parts_revenue_part_category_consumables: 0
+        parts_revenue_part_category_parts: 0
+        parts_totl_amnt: 0
+        party_cd: null
+        pendency_reason: null
+        pendncy_resn_cd: null
+        pickup_by: null
+        pickup_type: null
+        pickup_type_name: null
+        prodct_divsn: 'BS'
+        promsd_delvry_date: '2024-10-07 17:30:00'
+        reg_numbr: 'TN1DAE8334'
+        repeat_repair_flag: null
+        rept_ro_ind: null
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_basic_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_discount_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_tax_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_total_amount: 0
+        revist_flag: null
+        revsd_promsd_delvry_date: null
+        revst_ind: 'N'
+        ro_24h_below: 0
+        ro_48h_below: 0
+        ro_72h_above: 0
+        ro_72h_below: 0
+        ro_bill_date: null
+        ro_cancl_date: '2024-10-07'
+        ro_cancl_resn_cd: 'RS'
+        ro_close_diff: null
+        ro_closed_date: null
+        ro_date: '2024-10-07'
+        ro_datetime: '2024-10-07 12:11:49'
+        ro_day_closed: null
+        ro_doc_type_name: null
+        ro_hour_diff: null
+        ro_id: 'R025E005783'
+        ro_key: 'R2G73725R025E005783'
+        ro_remrks: null
+        ro_sorc: 'W'
+        ro_source_name: 'Walk-In'
+        ro_stats: 'CAN'
+        rsa_expry_date: null
+        rsa_registartion_flag: 'RSA Not Registered'
+        rsa_regstrtn_stats: null
+        sa_emply_cd: '1AAD4911'
+        sa_emply_name: 'SUGAN R'
+        sa_feedbck_stats: null
+        same_day_dely_resn_cd: null
+        scheme_exp_date: null
+        sdd_flag: 0
+        segmnt_cd: 'PERSONAL'
+        serv_catgry_desc: 'Free Service'
+        servc_type: 1
+        servc_type_desc: '1ST FREE SERVICE'
+        service_campaign_type_name: null
+        service_group: 'Mechanical'
+        service_type_name: '1ST FREE SERVICE'
+        shield_registration_flag: 'Shield Not Registered'
+        shield_validity_flag: 'Valid Shield'
+        spot_care_appl_fl: 'N'
+        srv_campgn_type: null
+        sv_apntmnt_hdr_sk: null
+        sv_ro_bill_hdr_sk: null
+        sv_ro_hdr_sk: 79840926
+        tat_1: null
+        tat_rnk: 1
+        taxi_indicator: 'NON TAXI'
+        taxi_nontx: 'NT'
+        tech_emply_cd: null
+        time_rev_apprvl_resn_cd: null
+        time_revision_approval_reason: null
+        valid_to: '9999-12-31'
+        vehcl_toe_ind: null
+        vehicle_brought_by: 'SELF'
+        vin: 'MA1NS2NWPR2G73725'
+        warranty_ageing_ro: 59
+        warranty_ageing_tday: 394
+        warranty_flag: 'Warranty'
+        repair_order_cancel_reason: 'RO open with incorrect Service type'
+        repair_order_delay_reason: null
+        repair_order_same_day_delay_reason: null
+      - accesories_flag: null
+        accessories_part_amount_at_gndp: null
+        accessories_part_amount_at_mrp: null
+        ageing_bucket: null
+        appl_to: null
+        arrived_date_for_eligibility: null
+        bay_actv_ind: null
+        bay_cd: null
+        bay_type: null
+        bay_type_name: null
+        bill_date: null
+        bill_datetime: null
+        bill_type: null
+        bill_type_name: null
+        brought_by_name: null
+        cancl_date: null
+        cea_flag: null
+        chas_numbr: null
+        closd_date: '2025-06-20'
+        colr_cd: null
+        cost_rev_apprvl_resn_cd: null
+        cost_revision_approval_reason: null
+        cretd_from: null
+        dely_resn_cd: null
+        div_key: null
+        doc_amnt: null
+        doc_stats: null
+        drop_by: null
+        drop_type: null
+        drop_type_name: null
+        eligible_vehicle_flag: null
+        estimation_variation_reason: null
+        estmt_warnc_resn_cd: null
+        exprs_servc_ind: null
+        flag_mtraq: null
+        govt_vehcl: null
+        invc_diff: null
+        key: null
+        key_acnt_segmnt: null
+        key_bay: null
+        key_emp: null
+        labr_basc: null
+        labr_basc_amnt: null
+        labr_basc_dtl: null
+        labr_charg_amnt: null
+        labr_totl_amnt: null
+        local_spares_customer_paid_spare_basic_amount: null
+        local_spares_customer_paid_spare_discount_amount: null
+        local_spares_customer_paid_spare_tax_amount: null
+        local_spares_customer_paid_spare_total_amount: null
+        local_spares_insurance_spare_basic_amount: null
+        local_spares_insurance_spare_discount_amount: null
+        local_spares_insurance_spare_tax_amount: null
+        local_spares_insurance_spare_total_amount: null
+        loctn_cd: null
+        m1_m2_m3_m4: null
+        max_to_days_frm_dos: null
+        maxicare_basic_labor_amnt: null
+        maxicare_basic_parts_amnt: null
+        maxicare_discount_parts_amnt: null
+        maxicare_labor_count: null
+        maxicare_labor_discount_amnt: null
+        maxicare_labor_tax_amnt: null
+        maxicare_part_qty_count: null
+        maxicare_parts_tax_amnt: null
+        maxicare_total_labor_amnt: null
+        maxicare_total_parts_amnt: null
+        maximile_oils_and_consumables_basic_amnt: null
+        maximile_oils_and_consumables_discount_amnt: null
+        maximile_oils_and_consumables_tax_amnt: null
+        maximile_oils_and_consumables_total_amnt: null
+        mdp_business_date: null
+        mdp_created_dt: null
+        mdp_job_id: null
+        modl_cd: null
+        modl_colr_key: null
+        mrp: null
+        ndp: null
+        non_maxicare_total_labor_amnt: null
+        odmtr_redng: null
+        oem_accesories_ancillary_income_basic_amount: null
+        oem_accesories_ancillary_income_discount_amount: null
+        oem_accesories_ancillary_income_tax_amount: null
+        oem_accesories_ancillary_income_total_amount: null
+        oem_modl_cd: null
+        oem_spare_customer_paid_spare_basic_amount: null
+        oem_spare_customer_paid_spare_discount_amount: null
+        oem_spare_customer_paid_spare_tax_amount: null
+        oem_spare_customer_paid_spare_total_amount: null
+        oem_spare_insurance_spare_basic_amount: null
+        oem_spare_insurance_spare_discount_amount: null
+        oem_spare_insurance_spare_tax_amount: null
+        oem_spare_insurance_spare_total_amount: null
+        online_paymnt_flg: null
+        orgnl_warrnty_expry_date: null
+        orgnl_warrnty_expry_km: null
+        orgnl_warrnty_start_date: null
+        paints_basic_amount: null
+        paints_discount_amount: null
+        paints_tax_amount: null
+        paints_total_amount: null
+        parnt_grop: null
+        part_amount_at_gndp: null
+        part_amount_at_mrp: null
+        part_charg_amnt: null
+        part_dtl_joined_flag: null
+        part_qty: null
+        parts_basc_amnt: null
+        parts_revenue_part_category_accessories: null
+        parts_revenue_part_category_consumables: null
+        parts_revenue_part_category_parts: null
+        parts_totl_amnt: null
+        party_cd: null
+        pendency_reason: null
+        pendncy_resn_cd: null
+        pickup_by: null
+        pickup_type: 'C'
+        pickup_type_name: 'Customer refused'
+        prodct_divsn: '04'
+        promsd_delvry_date: '2025-06-20 19:42:00'
+        reg_numbr: 'R5J60218'
+        repeat_repair_flag: null
+        rept_ro_ind: null
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_basic_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_discount_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_tax_amount: 0
+        revenue_from_sales_of_tyres_and_batteries_ancillary_income_total_amount: 0
+        revist_flag: null
+        revsd_promsd_delvry_date: '2025-06-20 19:42:00'
+        revst_ind: 'N'
+        ro_24h_below: 85730022
+        ro_48h_below: 85730022
+        ro_72h_above: 0
+        ro_72h_below: 85730022
+        ro_bill_date: '2025-06-20'
+        ro_cancl_date: null
+        ro_cancl_resn_cd: null
+        ro_close_diff: 0
+        ro_closed_date: '2025-06-20'
+        ro_date: '2025-06-20'
+        ro_datetime: '2025-06-20 18:42:00'
+        ro_day_closed: 0
+        ro_doc_type_name: 'Cheque'
+        ro_hour_diff: 0.04
+        ro_id: 'R026B001138'
+        ro_key: 'R5J60218R026B001138'
+        ro_remrks: 'OIL CHANGE DONE BY MMT'
+        ro_sorc: 'T'
+        ro_source_name: 'MMT'
+        ro_stats: 'BIL'
+        rsa_expry_date: null
+        rsa_registartion_flag: 'RSA Not Registered'
+        rsa_regstrtn_stats: null
+        sa_emply_cd: 'MT'
+        sa_emply_name: null
+        sa_feedbck_stats: null
+        same_day_dely_resn_cd: null
+        scheme_exp_date: null
+        sdd_flag: 85730022
+        segmnt_cd: 'LMM'
+        serv_catgry_desc: 'Free Service'
+        servc_type: 1
+        servc_type_desc: '1ST FREE SERVICE'
+        service_campaign_type_name: 'Within Workshop'
+        service_group: 'Mechanical'
+        service_type_name: '1ST FREE SERVICE'
+        shield_registration_flag: 'Shield Not Registered'
+        shield_validity_flag: 'Invalid Shield'
+        spot_care_appl_fl: 'N'
+        srv_campgn_type: 'WW'
+        sv_apntmnt_hdr_sk: 0
+        sv_ro_bill_hdr_sk: 91011770
+        sv_ro_hdr_sk: 85730022
+        tat_1: 0.07622685185185185
+        tat_rnk: 1
+        taxi_indicator: 'NON TAXI'
+        taxi_nontx: 'NT'
+        tech_emply_cd: null
+        time_rev_apprvl_resn_cd: null
+        time_revision_approval_reason: null
+        valid_to: null
+        vehcl_toe_ind: null
+        vehicle_brought_by: null
+        vin: null
+        warranty_ageing_ro: null
+        warranty_ageing_tday: null
+        warranty_flag: null
+        repair_order_cancel_reason: null
+        repair_order_delay_reason: null
+        repair_order_same_day_delay_reason: null
+
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_retention'
+      sample_rows:
+      - retail_date: '2024-12-31'
+        service_date: null
+        div_key: 'A2Z01A2Z104'
+        product_key: '1EV2DDH5T3FZGWSAOWHITE'
+        serv_catgry_desc: null
+        servc_catgry: null
+        parts_basc_amnt: null
+        labr_basc_dtl: null
+        sal_zone_name: 'North Zone'
+        sal_area_name: 'LMM Delhi'
+        SAL_PARNT_GROP: 'A2Z01'
+        srv_zone_name: null
+        srv_area_ofce: null
+        srv_parnt_grop: null
+        chas_numbr: 'R5J78018'
+        sv_ro_hdr_sk: null
+        orgnl_warrnty_expry_date: '2024-12-31'
+        servc_type: null
+        family_cd: 'J53'
+        family_desc: 'eAlfa+'
+        mdp_created_dt: '2025-09-08 01:24:08'
+        mdp_job_id: 'mdp_ad_s_g_ddp_service_retention_20250908065243'
+        mdp_business_date: '2025-09-07'
+      - retail_date: '2025-02-25'
+        service_date: null
+        div_key: 'A2Z01A2Z104'
+        product_key: '1AM2NLUT39MBBWSACWHITE'
+        serv_catgry_desc: null
+        servc_catgry: null
+        parts_basc_amnt: null
+        labr_basc_dtl: null
+        sal_zone_name: 'North Zone'
+        sal_area_name: 'LMM Delhi'
+        SAL_PARNT_GROP: 'A2Z01'
+        srv_zone_name: null
+        srv_area_ofce: null
+        srv_parnt_grop: null
+        chas_numbr: 'S5B83402'
+        sv_ro_hdr_sk: null
+        orgnl_warrnty_expry_date: '2025-02-25'
+        servc_type: null
+        family_cd: 'J55'
+        family_desc: 'Alfa CNG duo cargo'
+        mdp_created_dt: '2025-09-08 01:24:08'
+        mdp_job_id: 'mdp_ad_s_g_ddp_service_retention_20250908065243'
+        mdp_business_date: '2025-09-07'
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.erp_tbl_s4hana_zapo_matcategory'
+      sample_rows:
+      - aedat: null
+        aenam: null
+        axle: null
+        bezel: null
+        brakes: null
+        brgew: null
+        category: 'MTS'
+        charg: 'C1POLRWHT'
+        colour: 'POLARA WHITE'
+        console: null
+        createdate: null
+        descrip: 'VEERO 1.5XL CBC V4'
+        dlr_plan_active: null
+        edcm: 'N'
+        emission: 'BS6'
+        engine_family_ibp: null
+        erdat: '2025-05-13'
+        ernam: '508725'
+        fog: null
+        gbtype: null
+        gearbox: null
+        gewei: null
+        ho_plan_active: '2'
+        hypoid_ratio: null
+        lastupdatetime: null
+        maktx: null
+        mandt: '500'
+        market: 'DOMESTIC'
+        matcat: 'VEERO'
+        matkl: 'G2G4ACUXB3C1A01WT'
+        matnr: null
+        matsubcat: null
+        mdp_business_date: '2025-09-14'
+        mdp_created_dt: '2025-09-15 05:32:29'
+        mdp_job_id: 'erp_b_s_tbl_s4hana_zapo_matcategory_20250915110134'
+        mfg_plant: 'CK01'
+        modl_cd: 'J56'
+        mvgr4: null
+        ntgew: null
+        old_model_code: null
+        prcat: null
+        prod_active: null
+        prod_seg_cd: 'PROSPER'
+        rowactiveflag: null
+        rowdeleteflag: null
+        siam_category_ibp: null
+        siam_segment_ibp: null
+        siamgrp: null
+        spart: 'PP'
+        stock: null
+        subgrp: '1.5XL CBC V4'
+        subgrpcd: null
+        submarket: null
+        theme: null
+        trans: 'MT'
+        transfercase: null
+        transmission_family_ibp: null
+        veh_type: 'CV'
+        vkorg: 'A001'
+        vtweg: '1'
+        workflowid: null
+        workflowrunid: null
+        zabs: null
+        zac: null
+        zairbag: null
+        zbody: null
+        zdrive: '2WD'
+        zengine: null
+        zengine_subgrp: null
+        zfuel: 'DIESEL'
+        zmrp_type: null
+        zpowerwindow: null
+        zseating: '3'
+        zstatus: '2'
+        zsterring: null
+        ztrim_level: 'V4'
+        ztrim_lvl: 'VEERO'
+        zvalve: null
+      - aedat: null
+        aenam: null
+        axle: '2.2/4'
+        bezel: null
+        brakes: null
+        brgew: null
+        category: 'MTS'
+        charg: 'A3EVRSTWHT'
+        colour: 'EVEREST WHITE'
+        console: null
+        createdate: '2025-05-10'
+        descrip: 'THAR LX D22 MT 4WD HT WQ - MINOR REFRESH'
+        dlr_plan_active: null
+        edcm: 'N'
+        emission: 'BS6'
+        engine_family_ibp: null
+        erdat: null
+        ernam: null
+        fog: null
+        gbtype: 'MG'
+        gearbox: null
+        gewei: null
+        ho_plan_active: '2'
+        hypoid_ratio: null
+        lastupdatetime: '2025-05-10 20:30:19'
+        maktx: null
+        mandt: '500'
+        market: 'DOMESTIC'
+        matcat: 'PASS UV'
+        matkl: 'THAR'
+        matnr: 'AW506BYKT2BYHC01WQ'
+        matsubcat: 'THAR'
+        mdp_business_date: '2025-09-14'
+        mdp_created_dt: '2025-09-15 05:32:29'
+        mdp_job_id: 'erp_b_s_tbl_s4hana_zapo_matcategory_20250915110134'
+        mfg_plant: 'A003'
+        modl_cd: 'THRN'
+        mvgr4: null
+        ntgew: '1785'
+        old_model_code: 'AW506BYKT2BYHC01WQ'
+        prcat: '1001'
+        prod_active: '2'
+        prod_seg_cd: 'PERSONAL'
+        rowactiveflag: 'Y'
+        rowdeleteflag: 'N'
+        siam_category_ibp: 'UV'
+        siam_segment_ibp: 'PASSENGER'
+        siamgrp: null
+        spart: 'TH'
+        stock: 'N'
+        subgrp: null
+        subgrpcd: null
+        submarket: null
+        theme: null
+        trans: 'MT'
+        transfercase: null
+        transmission_family_ibp: null
+        veh_type: 'PV'
+        vkorg: 'A001'
+        vtweg: '1'
+        workflowid: '025aeb35e-8e06-4403-8df5-9e2933d49c31'
+        workflowrunid: 'a650b10d-1c37-47c9-a0cc-5401d9f938d8'
+        zabs: 'Y'
+        zac: null
+        zairbag: 'Y'
+        zbody: 'HT'
+        zdrive: '4WD'
+        zengine: null
+        zengine_subgrp: 'DIESEL'
+        zfuel: null
+        zmrp_type: null
+        zpowerwindow: null
+        zseating: '4'
+        zstatus: '2'
+        zsterring: null
+        ztrim_level: 'LX HT'
+        ztrim_lvl: 'THAR'
+        zvalve: null
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.verbatim_cmm'
+      sample_rows:
+      - ro_number: 'R025A005999'
+        ro_open_dt: '2024-08-13 09:49:32'
+        sv_ro_hdr_sk: 78736785
+        parnt_grop: 'A2Z01'
+        location_code: 'A2Z1'
+        demanded_verbatim: 'REMOTE SE LOCK KARNE PAR DRIVER DOOR LOCK NAHI HOTA HAI'
+        verbatim_group: null
+        verbatim_code: null
+        cust_verbtm_desc: null
+        verbatim_group_desc: null
+        vin: 'MA1TA2XM2N2A16520'
+        registration_number: 'UP12BL2158'
+        vehicle_sale_date: '2022-02-24'
+        customer_id: 'C220601415'
+        servc_type: 'RR'
+        Priority_verbatim_flag: 'N'
+      - ro_number: 'R025A008737'
+        ro_open_dt: '2024-10-15 14:24:00'
+        sv_ro_hdr_sk: 80000175
+        parnt_grop: 'A2Z01'
+        location_code: 'A2Z1'
+        demanded_verbatim: 'WASHING & CLEANING'
+        verbatim_group: null
+        verbatim_code: null
+        cust_verbtm_desc: null
+        verbatim_group_desc: null
+        vin: 'MA1UJ4YC2N2F21431'
+        registration_number: 'UK07FF0111'
+        vehicle_sale_date: '2022-06-27'
+        customer_id: 'C230116984'
+        servc_type: 'PDS'
+        Priority_verbatim_flag: 'N'
+
+  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_ad_ai_final_dimension'
+      sample_rows:
+      - segmnt_cd: 'COMMERCIAL'
+        bu: 'AD'
+        delr_name_srv: null
+        delr_email_sal: null
+        delr_mobl_sal: null
+        delr_name_sal: null
+        zonl_head_srv: '25000593'
+        vp_srv: null
+        vp_sal: null
+        delr_actv_ind: null
+        sals_orgnztn: null
+        prodct_divsn: 'PP'
+        compny_name: null
+        compny_cd: null
+        city_cd: null
+        batch_pickd_flag: null
+        batch_pickd_date: null
+        area_ofce: 'A060'
+        actv_ind: null
+        acc_loctn_ind: null
+        longitude: null
+        latitude: null
+        dp_mob_no: null
+        dp_land_no: null
+        dp_land_code: null
+        dp_email_id: null
+        me_ccm: null
+        me_asm: null
+        delr_serv_email: null
+        delr_serv_contct: null
+        delr_sals_email: null
+        delr_sals_contct: null
+        escaltd_cccf: null
+        onlin_bookng: null
+        delr_disply_ind: null
+        disply_city: null
+        distrbtn_chanl2: null
+        distrbtn_chanl1: null
+        ro_type: null
+        csp: null
+        ssp: null
+        loctn_catgry: null
+        alt_de_loctn_cd: null
+        co_ccm: null
+        update_flag: null
+        dy_rsm: null
+        dy_rccm: null
+        last_updt_date: null
+        pric_city_cd: null
+        ea_zm_srv: null
+        ea_zm_sal: null
+        payr_cd: null
+        delr_email_srv: null
+        delr_mobl_srv: null
+        modfd_date: null
+        modfd_by: null
+        cretd_date: null
+        cretd_by: null
+        zonl_head: '206846'
+        zone: '000001'
+        unldng_pont: null
+        stat_cd: null
+        srv_loctn_ind: null
+        srv_engnr: '2335582'
+        sprs_loctn_ind: null
+        sale_loctn_ind: null
+        sal_ofcr: '2510270'
+        rsm: '205025'
+        regn_cd: null
+        rccm: '23113229'
+        parnt_grop: 'LAN01'
+        ordrng_spr_loctn: null
+        ordrng_sal_loctn: null
+        loctn_pin_cd: null
+        loctn_name: 'NH, BYEPASS, JAMMU'
+        loctn_cd: 'LAM2'
+        loctn_adrs: null
+        locty: null
+        distrbtn_chanl: null
+        deltd_date: null
+        delr_type: null
+        delr_tin: null
+        delr_tan: null
+        delr_name: 'LAHORI MOTORS PRIVATE LTD.'
+        delr_cst_numbr: null
+        delr_cd: 'SL010211'
+        rn: null
+        area_name: 'Chandigarh'
+        zone_name: 'North Zone'
+        asm_name: 'Sanjay Singh'
+        ccm_name: 'Dharmbir Gill'
+        rsm_name: 'Rahul Vaidya'
+        rccm_name: 'RAVI KHURANA'
+        zonal_head_sales: 'DAS ROBIN K'
+        zonal_head_cc: 'KHAIRA SANMUKH'
+        mdp_created_dt: '2025-09-15 00:41:29'
+        mdp_job_id: 'mdp_s_g_ddp_ad_ai_final_dimension_20250915060910'
+        mdp_business_date: '2025-09-14'
+      - segmnt_cd: 'COMMERCIAL'
+        bu: 'AD'
+        delr_name_srv: null
+        delr_email_sal: null
+        delr_mobl_sal: null
+        delr_name_sal: null
+        zonl_head_srv: '25000593'
+        vp_srv: null
+        vp_sal: null
+        delr_actv_ind: null
+        sals_orgnztn: null
+        prodct_divsn: '03'
+        compny_name: null
+        compny_cd: null
+        city_cd: null
+        batch_pickd_flag: null
+        batch_pickd_date: null
+        area_ofce: 'A060'
+        actv_ind: null
+        acc_loctn_ind: null
+        longitude: null
+        latitude: null
+        dp_mob_no: null
+        dp_land_no: null
+        dp_land_code: null
+        dp_email_id: null
+        me_ccm: null
+        me_asm: null
+        delr_serv_email: null
+        delr_serv_contct: null
+        delr_sals_email: null
+        delr_sals_contct: null
+        escaltd_cccf: null
+        onlin_bookng: null
+        delr_disply_ind: null
+        disply_city: null
+        distrbtn_chanl2: null
+        distrbtn_chanl1: null
+        ro_type: null
+        csp: null
+        ssp: null
+        loctn_catgry: null
+        alt_de_loctn_cd: null
+        co_ccm: null
+        update_flag: null
+        dy_rsm: null
+        dy_rccm: null
+        last_updt_date: null
+        pric_city_cd: null
+        ea_zm_srv: null
+        ea_zm_sal: null
+        payr_cd: null
+        delr_email_srv: null
+        delr_mobl_srv: null
+        modfd_date: null
+        modfd_by: null
+        cretd_date: null
+        cretd_by: null
+        zonl_head: '206846'
+        zone: '000001'
+        unldng_pont: null
+        stat_cd: null
+        srv_loctn_ind: null
+        srv_engnr: '23126455'
+        sprs_loctn_ind: null
+        sale_loctn_ind: null
+        sal_ofcr: '25120091'
+        rsm: '205025'
+        regn_cd: null
+        rccm: '23113229'
+        parnt_grop: 'DME01'
+        ordrng_spr_loctn: null
+        ordrng_sal_loctn: null
+        loctn_pin_cd: null
+        loctn_name: 'SAMRALA, SS'
+        loctn_cd: 'DE06'
+        loctn_adrs: null
+        locty: null
+        distrbtn_chanl: null
+        deltd_date: null
+        delr_type: null
+        delr_tin: null
+        delr_tan: null
+        delr_name: 'DADA MOTOR ENTERPRISES LLP'
+        delr_cst_numbr: null
+        delr_cd: 'SD010551'
+        rn: null
+        area_name: 'Chandigarh'
+        zone_name: 'North Zone'
+        asm_name: 'Rahul Kalal'
+        ccm_name: 'Venu Bhardwaj'
+        rsm_name: 'Rahul Vaidya'
+        rccm_name: 'RAVI KHURANA'
+        zonal_head_sales: 'DAS ROBIN K'
+        zonal_head_cc: 'KHAIRA SANMUKH'
+        mdp_created_dt: '2025-09-15 00:41:29'
+        mdp_job_id: 'mdp_s_g_ddp_ad_ai_final_dimension_20250915060910'
+        mdp_business_date: '2025-09-14'
   {samples}
 
 usecase_specific_table_information: |
   ---
-  **Table: `events`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, Partition Key). Latest available date is assumed to be **2025-05-14**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `user_id`. `sequence_number` shows the order in which the events are done for each `user_id` 
+  **Table: `cdp_labr_cmn`**
+  * **Description:** Contains detailed records of labor charges associated with service repair orders.
+  * **Update Frequency:** Updated daily as new repair orders are billed.
+  * **Date Identifier:** `ro_date` (Timestamp). This column should be used for time-based filtering.
+  * **Granularity:** Each row represents a single, specific labor operation on a customer's repair order bill, identified by `sv_ro_bill_labr_dtl_sk`.
 
   ---
-  **Table: `inventory_items`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-12**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `product_id`. `sold_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was sold. NULL is not sold
+  **Table: `cdp_part_cmn`**
+  * **Description:** Contains detailed records of parts used and charged in service repair orders.
+  * **Update Frequency:** Updated daily as new parts are billed.
+  * **Date Identifier:** `ro_date` (Timestamp). This is the primary column for filtering by date.
+  * **Granularity:** Each row represents a single part line item on a customer's repair order bill, identified by `sv_ro_bill_part_dtl_sk`.
 
   ---
-  **Table: `order_items`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-14**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `order_id`. `shipped_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was shipped. `delivered_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was delivered. `returned_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was returned. Null if not returned. 
+  **Table: `ddp_dim_srv_mst_model_master`**
+  * **Description:** A master dimension table containing detailed attributes for every vehicle model.
+  * **Update Frequency:** Updated as needed when new vehicle models are introduced or existing ones are modified.
+  * **Date Identifier:** `mdp_business_date` can be used to see the state of the master data on a specific day.
+  * **Granularity:** Each row is a unique vehicle model, identified by `modl_cd`.
 
   ---
-  **Table: `orders`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-10**.
-  * **Granularity:** `order_id` as the PRIMARY_KEY column. Ignore `shipped_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) and `delivered_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) and `returned_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) for any calculations. Use these columns from `order_items` by joining with `orders`.
+  **Table: `ddp_part_master`**
+  * **Description:** A master dimension table holding information about all serviceable parts.
+  * **Update Frequency:** Updated as needed when new parts are added to inventory.
+  * **Date Identifier:** This is a master table without a primary transaction date column.
+  * **Granularity:** Each row represents a unique part, identified by `PART_NUMBR`.
 
   ---
-  **Table: `users`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-9**.
- 
+  **Table: `ddp_service_cmm_kpis`**
+  * **Description:** A key performance indicator (KPI) table that aggregates data and flags for each repair order. This is a central table for service analysis.
+  * **Update Frequency:** Updated daily.
+  * **Date Identifier:** `ro_date` (Date of repair order) is the primary date column for analysis. `bill_date` and `ro_closed_date` are also relevant for different KPIs.
+  * **Granularity:** Each row represents a unique service repair order and its associated KPIs, identified by `sv_ro_hdr_sk`.
+
+  ---
+  **Table: `ddp_service_retention`**
+  * **Description:** This table is structured to analyze customer service retention over time.
+  * **Update Frequency:** Updated on a regular basis (e.g., daily or weekly) to calculate retention metrics.
+  * **Date Identifier:** `service_date` is the key date for tracking service intervals.
+  * **Granularity:** Each row represents a service event for a vehicle, identified by `sv_ro_hdr_sk`, used for retention tracking.
+
+  ---
+  **Table: `verbatim_cmm`**
+  * **Description:** Stores raw customer feedback and comments (verbatims) collected during the service process.
+  * **Update Frequency:** Updated daily as new feedback is received.
+  * **Date Identifier:** `ro_open_dt` (Repair order open date) links the feedback to a service event date.
+  * **Granularity:** Each row represents a single customer verbatim comment tied to a repair order, identified by a combination of `sv_ro_hdr_sk` and `verbatim_code`.
+
+  ---
+  **Table: `ddp_ad_ai_final_dimension`**
+  * **Description:** A final dimension table containing comprehensive information about dealers, locations, and organizational structure.
+  * **Update Frequency:** Updated as needed when dealer or location information changes.
+  * **Date Identifier:** `mdp_business_date` reflects the date of the data record.
+  * **Granularity:** Each row represents a unique location, typically a dealer, identified by `loctn_cd`.
+
+  ---
+  **Table: `erp_tbl_s4hana_zapo_matcategory`**
+  * **Description:** A master data table from an ERP system (SAP S/4HANA) that contains material and vehicle category information.
+  * **Update Frequency:** Updated as needed when material master data changes in the source ERP system.
+  * **Date Identifier:** `mdp_business_date` or `createdate` can be used to track record changes.
+  * **Granularity:** Each row represents a unique material (part or vehicle), identified by `matnr`.
+
+knowledge_graph: |
+  {
+    "dataset": {
+      "name": "mdp_ad_td_bqd_common",
+      "description": "This dataset contains comprehensive information related to vehicle service and repair operations, parts management, and customer feedback. It includes data on labor costs, parts usage, repair orders, and dealer information. The dataset also provides insights into vehicle models, material categories, and service KPIs. This data can be used to analyze service performance, identify trends in repair orders, optimize parts inventory, and improve customer satisfaction. Furthermore, the dataset enables detailed reporting on dealer performance, service operations, and product lifecycle."
+    },
+    "relationships": [
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.sv_ro_bill_hdr_sk = ddp_service_cmm_kpis.sv_ro_bill_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.loctn_cd = ddp_service_cmm_kpis.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_ad_ai_final_dimension", "relationship": "cdp_labr_cmn.loctn_cd = ddp_ad_ai_final_dimension.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "ddp_ad_ai_final_dimension", "table2": "ddp_service_cmm_kpis", "relationship": "ddp_ad_ai_final_dimension.loctn_cd = ddp_service_cmm_kpis.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.loctn_cd = cdp_part_cmn.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.veh_registration_no = cdp_part_cmn.veh_registration_no", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.parnt_grop = cdp_part_cmn.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "ddp_dim_srv_mst_model_master", "table2": "ddp_service_cmm_kpis", "relationship": "ddp_dim_srv_mst_model_master.modl_cd = ddp_service_cmm_kpis.modl_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.ro_date = cdp_part_cmn.ro_date", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.vin = cdp_part_cmn.vin", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.segmnt_cd = ddp_service_cmm_kpis.segmnt_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.modl_grop_cd = cdp_part_cmn.modl_grop_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.prodct_divsn = cdp_part_cmn.prodct_divsn", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.customerId = verbatim_cmm.customer_id", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_retention", "relationship": "cdp_part_cmn.sv_ro_hdr_sk = ddp_service_retention.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.sv_ro_bill_hdr_sk = ddp_service_cmm_kpis.sv_ro_bill_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_dim_srv_mst_model_master", "relationship": "cdp_labr_cmn.modl_grop_cd = ddp_dim_srv_mst_model_master.modl_grop_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_ad_ai_final_dimension", "relationship": "cdp_labr_cmn.parnt_grop = ddp_ad_ai_final_dimension.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.customerId = cdp_part_cmn.customerId", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.parnt_grop = ddp_service_cmm_kpis.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.parnt_grop = verbatim_cmm.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.sv_ro_hdr_sk = cdp_part_cmn.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.prodct_divsn = ddp_service_cmm_kpis.prodct_divsn", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.sv_ro_bill_hdr_sk = cdp_part_cmn.sv_ro_bill_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.loctn_cd = verbatim_cmm.location_code", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.customerId = verbatim_cmm.customer_id", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_dim_srv_mst_model_master", "relationship": "cdp_part_cmn.modl_grop_cd = ddp_dim_srv_mst_model_master.modl_grop_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.vin = ddp_service_cmm_kpis.vin", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_ad_ai_final_dimension", "relationship": "cdp_part_cmn.parnt_grop = ddp_ad_ai_final_dimension.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_ad_ai_final_dimension", "relationship": "cdp_part_cmn.loctn_cd = ddp_ad_ai_final_dimension.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.ro_month = cdp_part_cmn.ro_month", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.sv_ro_hdr_sk = verbatim_cmm.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.segmnt_cd = cdp_part_cmn.segmnt_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.loctn_cd = verbatim_cmm.location_code", "source": "LLM-inferred" },
+      { "table1": "ddp_ad_ai_final_dimension", "table2": "verbatim_cmm", "relationship": "ddp_ad_ai_final_dimension.loctn_cd = verbatim_cmm.location_code", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.vin = ddp_service_cmm_kpis.vin", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.vin = verbatim_cmm.vin", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.sv_ro_hdr_sk = ddp_service_cmm_kpis.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.sv_ro_hdr_sk = ddp_service_cmm_kpis.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_retention", "relationship": "cdp_labr_cmn.sv_ro_hdr_sk = ddp_service_retention.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.segmnt_cd = ddp_service_cmm_kpis.segmnt_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.parnt_grop = ddp_service_cmm_kpis.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.parnt_grop = verbatim_cmm.parnt_grop", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.vin = verbatim_cmm.vin", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.sv_ro_hdr_sk = verbatim_cmm.sv_ro_hdr_sk", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.loctn_cd = ddp_service_cmm_kpis.loctn_cd", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.prodct_divsn = ddp_service_cmm_kpis.prodct_divsn", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_labr_cmn.odmtr_redng = ddp_service_cmm_kpis.odmtr_redng", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_part_master", "relationship": "cdp_labr_cmn.prodct_divsn = ddp_part_master.PART_PRODCT_DIVSN", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.vehicleModels = cdp_part_cmn.vehicleModels", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_cmm_kpis", "relationship": "cdp_part_cmn.odmtr_redng = ddp_service_cmm_kpis.odmtr_redng", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "cdp_part_cmn", "relationship": "cdp_labr_cmn.odmtr_redng = cdp_part_cmn.odmtr_redng", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_part_master", "relationship": "cdp_part_cmn.part_prodct_divsn = ddp_part_master.PART_PRODCT_DIVSN", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_part_master", "relationship": "cdp_labr_cmn.loctn_cd = ddp_part_master.link_Dealer", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_part_master", "relationship": "cdp_part_cmn.loctn_cd = ddp_part_master.link_Dealer", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "verbatim_cmm", "relationship": "cdp_labr_cmn.ro_date = verbatim_cmm.ro_open_dt", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "erp_tbl_s4hana_zapo_matcategory", "relationship": "cdp_part_cmn.modl_grop_cd = erp_tbl_s4hana_zapo_matcategory.modl_cd", "source": "LLM-inferred" },
+      { "table1": "ddp_ad_ai_final_dimension", "table2": "ddp_service_retention", "relationship": "ddp_ad_ai_final_dimension.loctn_cd = ddp_service_retention.srv_area_ofce", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "verbatim_cmm", "relationship": "cdp_part_cmn.ro_date = verbatim_cmm.ro_open_dt", "source": "LLM-inferred" },
+      { "table1": "cdp_part_cmn", "table2": "ddp_service_retention", "relationship": "cdp_part_cmn.prodct_divsn = ddp_service_retention.div_key", "source": "LLM-inferred" },
+      { "table1": "ddp_ad_ai_final_dimension", "table2": "ddp_service_retention", "relationship": "ddp_ad_ai_final_dimension.parnt_grop = ddp_service_retention.SAL_PARNT_GROP", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "ddp_service_retention", "relationship": "cdp_labr_cmn.prodct_divsn = ddp_service_retention.div_key", "source": "LLM-inferred" },
+      { "table1": "cdp_labr_cmn", "table2": "erp_tbl_s4hana_zapo_matcategory", "relationship": "cdp_labr_cmn.modl_grop_cd = erp_tbl_s4hana_zapo_matcategory.modl_cd", "source": "LLM-inferred" }
+    ]
+  }
+
 few_shot_examples: |
   ---
   ### Few-Shot Examples (Based on Defined Schema):
 
-  **Example 1: Quarterly return rate trend broken down by product category**
-  * **User Query:** "What is the quarterly trend of the return rate, broken down by product category, and what is the difference in return rate compared to the previous quarter??"
-  * **Thought Process:** User wants return rate broken down by product category for each quarter as well as the difference in return rate from previous quarter. JOIN `order_items` with `products`, Filter `orders` by `returned_at IS NOT NULL`, fetch quarter_start from `returned_at`, COUNT DISTINCT order_id by `returned_at IS NOT NULL` to calculate returned_orders and COUNT DISTINCT order_id to calculate total_orders, then `GROUP BY quarter_start, product.category` and `COUNT(DISTINCT order_id)`. Calculate return_rate as `returned_orders / total_orders`. Use LAG function to calculate previous quarter return.
+  **Example 1: Top 5 Vehicle Models by Service Revenue**
+  * **User Query:** "Show me the top 5 vehicle models that generated the most service revenue (parts and labor combined) so far this year."
+  * **Thought Process:** The user wants to see the highest revenue-generating vehicle models. I need to calculate the total revenue by summing parts and labor amounts from the `ddp_service_cmm_kpis` table. Then, I'll join this with `ddp_dim_srv_mst_model_master` to get the actual model names. Finally, I will group by the model name, order the results by the total revenue in descending order, and limit the output to the top 5. I will filter the `ro_date` to only include records from the current year.
   * **Generated SQL:**
       ```sql
-      -- Quarterly return rate trend broken down by product category
-      WITH
-          quarterly_returns AS (
-          SELECT
-            DATE_TRUNC(oi.returned_at, QUARTER) AS quarter_start,
-            p.category,
-            COUNT(DISTINCT
-              CASE
-                WHEN oi.returned_at IS NOT NULL THEN oi.order_id
-            END
-              ) AS returned_orders,
-            COUNT(DISTINCT oi.order_id) AS total_orders
-          FROM
-            `thelook_ecommerce.order_items` oi
-          JOIN
-            `thelook_ecommerce.products` p
-          ON
-            oi.product_id = p.id
-          WHERE
-            oi.returned_at IS NOT NULL
-          GROUP BY
-            1,
-            2 ),
-          return_rates AS (
-          SELECT
-            quarter_start,
-            category,
-            (returned_orders / total_orders) AS return_rate
-          FROM
-            quarterly_returns )
-        SELECT
-          quarter_start,
-          category,
-          return_rate,
-          LAG(return_rate, 1, 0) OVER (PARTITION BY category ORDER BY quarter_start) AS previous_quarter_return_rate,
-          return_rate - LAG(return_rate, 1, 0) OVER (PARTITION BY category ORDER BY quarter_start) AS return_rate_difference
-        FROM
-          return_rates
-        ORDER BY
-          quarter_start,
-          category;
-      ```
-
-  **Example 2: JOIN orders and order_items with users table **
-  * **User Query:** "Show the top 5 states with the highest average order value (AOV) to target marketing efforts."
-  * **Thought Process:** User wants average order value (AOV) which will be calculated using the `order_items.sasle_price` column values as `average_order_value`. JOIN orders, users and order_items tables, GROUP BY `state` column and ORDER BY `average_order_value` DESC and LIMIT to 5 records. 
-  * **Generated SQL:**
-      ```sql
+      -- Calculate total service revenue for the top 5 vehicle models in the current year
       SELECT
-          u.state,
-          AVG(oi.sale_price) AS average_order_value
+          m.modl_desc AS vehicle_model,
+          SUM(k.parts_totl_amnt + k.labr_totl_amnt) AS total_revenue
         FROM
-          `thelook_ecommerce.users` AS u
+          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis` AS k
         JOIN
-          `thelook_ecommerce.orders` AS o
+          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master` AS m
         ON
-          u.id = o.user_id
-        JOIN
-          `thelook_ecommerce.order_items` AS oi
-        ON
-          o.order_id = oi.order_id
+          k.modl_cd = m.modl_cd
+        WHERE
+          k.ro_date >= DATE_TRUNC(CURRENT_DATE(), YEAR)
         GROUP BY
-          u.state
+          1
         ORDER BY
-          average_order_value DESC
+          total_revenue DESC
         LIMIT
           5;
       ```
 
+  **Example 2: Monthly Trend of Labor vs. Parts Revenue**
+  * **User Query:** "What is the monthly trend of labor revenue versus parts revenue for the last 6 months?"
+  * **Thought Process:** The user wants a monthly comparison of revenue from labor and parts. I will use the `ddp_service_cmm_kpis` table, which contains the `ro_date`, `labr_totl_amnt`, and `parts_totl_amnt`. I need to truncate the `ro_date` to the beginning of the month to group the data monthly. Then, I will filter the data for the last 6 months. Finally, I'll group by the month and sum the labor and parts amounts to show the trend.
+  * **Generated SQL:**
+      ```sql
+      -- Show monthly labor and parts revenue for the last 6 months
+      SELECT
+          DATE_TRUNC(ro_date, MONTH) AS revenue_month,
+          SUM(labr_totl_amnt) AS total_labor_revenue,
+          SUM(parts_totl_amnt) AS total_parts_revenue
+        FROM
+          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis`
+        WHERE
+          ro_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
+        GROUP BY
+          1
+        ORDER BY
+          revenue_month;
+      ```
   ---
-  Now, analyze the user's request based on the schema and few-shot examples, following the steps: Analyze -> Clarify Timeframe (If Needed) -> Clarify Tables/Columns/Intent (If Needed) -> Translate -> Display SQL -> Execute Tool -> Present Results. Remember to use the full table names like `pawan-argolis-demo.thelook_ecommerce.table_name` in the generated SQL and join on the String identifier columns directly.
+  Now, analyze the user's request based on the schema and few-shot examples, following the steps: Analyze -> Clarify Timeframe (If Needed) -> Clarify Tables/Columns/Intent (If Needed) -> Translate -> Display SQL -> Execute Tool -> Present Results. Remember to use the full table names like `mdp-ad-td-prd.mdp-ad-td-bqd-common.table_name` in the generated SQL and join on the String identifier columns directly.

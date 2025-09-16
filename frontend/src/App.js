@@ -1,49 +1,64 @@
-// App.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import './App.css'; // Ensure this global CSS is imported
+import './App.css';
 
-// Import your components
-import ChatInterface from './components/ChatInterface/ChatInterface'; // Assuming this is your page component
+import LoginPage from './components/LoginPage/LoginPage';
+import ChatInterface from './components/ChatInterface/ChatInterface';
 import VerticalNav from './components/VerticalNav/VerticalNav';
-import DataPreview from './components/DataPreview/DataPreview'; // Assuming this is your page component
-import SolutionArchitecture from './components/SolutionArchitecture/SolutionArchitecture'; // Assuming this is your page component
+import DataPreview from './components/DataPreview/DataPreview';
+import SolutionArchitecture from './components/SolutionArchitecture/SolutionArchitecture';
 import HorizontalNav from './components/HorizontalNav/HorizontalNav';
 
-/**
- * Main application component.
- * Sets up the overall layout with a horizontal navigation bar at the top,
- * a vertical navigation bar on the side, and the main content area.
- * Uses React Router for handling different page views.
- */
 function App() {
+  const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (username) {
+      localStorage.setItem('username', username);
+    } else {
+      localStorage.removeItem('username');
+    }
+  }, [username]);
+
+  const handleLogin = (userData) => {
+    setIsLoading(true);
+    setUsername(userData.username);
+    console.log('Logged in as:', userData.username, 'with role:', userData.role);
+    setIsLoading(false);
+  };
+
+  const handleLogout = () => {
+    setUsername('');
+    console.log('Logged out');
+  };
+
+  if (!username) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <Router>
-      {/* Main container for the entire application page */}
       <div className="App-container">
-        {/* Horizontal navigation bar at the top of the page */}
-        <HorizontalNav />
-
-        {/* Wrapper for the content area below the HorizontalNav, containing VerticalNav and Main Content */}
+        <HorizontalNav username={username} onLogout={handleLogout} />
         <div className="App-content-area">
-          {/* Vertical navigation panel on the left side */}
           <VerticalNav />
-
-          {/* Main content area where routed pages will be displayed */}
           <main className="App-main-content">
             <Routes>
-              {/* Default route, e.g., to ChatInterface */}
-              <Route path="/" element={<ChatInterface />} />
-              {/* Route to DataPreview page */}
+              <Route
+                path="/"
+                element={<ChatInterface username={username} />}
+              />
+              <Route
+                path="/chat"
+                element={<ChatInterface username={username} />}
+              />
               <Route path="/data-preview" element={<DataPreview />} />
-              {/* Route to SolutionArchitecture page */}
               <Route path="/solution-architecture" element={<SolutionArchitecture />} />
-              {/* It's good practice to also have a specific route for chat if it's not the only default */}
-              <Route path="/chat" element={<ChatInterface />} />
             </Routes>
           </main>
-        </div> {/* End of App-content-area */}
-      </div> {/* End of App-container */}
+        </div>
+      </div>
     </Router>
   );
 }

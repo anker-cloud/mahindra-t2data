@@ -2,13 +2,13 @@
 
 # === Configuration ===
 # Define App identifiers and corresponding Cloud Run Service Names
-APP_IDENTIFIER="app" # Argument for Flask app
+APP_IDENTIFIER="talk-to-data-app" # Argument for Flask app
 
-APP_SERVICE_NAME=""   # Cloud Run service name for the Flask app
+APP_SERVICE_NAME="talk-to-data-main-app"   # Cloud Run service name for the Flask app
 # Define components of the image name
-GCP_REGION="us-central1"
-ARTIFACT_REGISTRY_REPO="" # CHANGE IF YOUR REPO NAME IS DIFFERENT
-IMAGE_NAME="main-app" # Name of the image itself
+GCP_REGION="asia-south1"
+ARTIFACT_REGISTRY_REPO="talk-to-data-repo" # CHANGE IF YOUR REPO NAME IS DIFFERENT
+IMAGE_NAME="talk-to-data-main-app" # Name of the image itself
 TAG="latest"
 # Note: MAIN_IMAGE_NAME is now constructed later, after PROJECT_ID is confirmed
 
@@ -77,10 +77,14 @@ gcloud config set project "$PROJECT_ID"
 echo "Submitting build to Cloud Build..."
 echo "Image to be built: $MAIN_IMAGE_NAME" # This should now print the correct path
 
+# Define the VPC-SC compliant log bucket here
+GCS_LOG_DIR="gs://${PROJECT_ID}-cloudbuild-logs"
+
 gcloud builds submit \
   --config cloudbuild.yaml \
   --substitutions=_IMAGE_NAME="$MAIN_IMAGE_NAME" \
   --timeout=1200s \
+  --gcs-log-dir="$GCS_LOG_DIR" \
   . # Build context is current directory
 
 # Check if build was successful
@@ -94,18 +98,20 @@ echo "Cloud Build finished successfully."
 echo "Deploying image $MAIN_IMAGE_NAME to Cloud Run service $CLOUDRUN_SERVICE_NAME..."
 
 # Prepare environment variables string for Cloud Run
-ENV_VARS="APP_MODE=$APP_MODE_VAR,GOOGLE_GENAI_USE_VERTEXAI=0"
+ENV_VARS="APP_MODE=$APP_MODE_VAR,GOOGLE_GENAI_USE_VERTEXAI=0,GOOGLE_API_KEY=AIzaSyDjwd7mnjAbUbqad4SqS22LFH1TB8bnN9A"
 # Add secrets if needed, e.g. --set-secrets=GOOGLE_API_KEY=your-secret-name:latest
 
 gcloud run deploy "$CLOUDRUN_SERVICE_NAME" \
     --image "$MAIN_IMAGE_NAME" \
     --region "$GCP_REGION" \
     --platform managed \
-    --port 8080 `# Port your container listens on (defined in entrypoint)`\
+    --port 8080 `# Port your container listens on (defined in entrypoint)` \
     --set-env-vars "$ENV_VARS" \
     --min-instances 1 `# Or adjust as needed` \
     --max-instances 1 \
-    --allow-unauthenticated # Or use --no-allow-unauthenticated and configure IAM
+    --allow-unauthenticated \
+    --timeout=900s \
+    --memory=2Gi
 
 # Check if deployment was successful
 if [ $? -ne 0 ]; then

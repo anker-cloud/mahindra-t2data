@@ -1,0 +1,248 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f4f4f4;
+  font-family: Arial, sans-serif;
+}
+
+.login-card {
+  width: 360px;.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #ffffff;
+  font-family: Arial, sans-serif;
+}
+
+.mahindra-logo {
+  width: 150px;
+  margin-bottom: 20px;
+}
+
+.welcome-text {
+  color: #e30613; /* Mahindra Red */
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+}
+
+.login-form label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.login-form input,
+.login-form select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.login-btn {
+  background-color: #e30613; /* Mahindra Red */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.login-btn:hover {
+  background-color: #b0050f;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f4f4f4;
+}
+
+.login-card {
+  width: 360px;
+  background: #fff;
+  padding: 32px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.logo {
+  width: 120px;
+  margin-bottom: 14px;
+}
+
+.title {
+  color: #e31e24;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.login-form { text-align: left; }
+.label { font-weight: 600; color: #333; margin-bottom: 6px; display: block; }
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background: #e31e24;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-btn:hover { background: #b8161b; }
+  background: #fff;
+  padding: 32px;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.logo {
+  width: 120px;
+  margin-bottom: 14px;
+}
+
+.title {
+  color: #e31e24;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.login-form { 
+  text-align: left; 
+}
+
+.label { 
+  font-weight: 600; 
+  color: #333; 
+  margin-bottom: 6px; 
+  display: block; 
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #e31e24;
+  box-shadow: 0 0 0 2px rgba(227, 30, 36, 0.1);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  background: #e31e24;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.login-btn:hover { 
+  background: #b8161b; 
+}
+
+.login-btn:active {
+  background: #a00e13;
+}
+
+/* Remove conflicting styles */
+.login-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100vh !important;
+  background: #f4f4f4 !important;
+}
+
+.mahindra-logo {
+  width: 150px;
+  margin-bottom: 20px;
+}
+
+.welcome-text {
+  color: #e30613; /* Mahindra Red */
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+}
+
+.login-form label {
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.login-form input,
+.login-form select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.login-btn {
+  background-color: #e30613; /* Mahindra Red */
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: 0.3s;
+  width: 100%;
+}
+
+.login-btn:hover {
+  background-color: #b0050f;
+}

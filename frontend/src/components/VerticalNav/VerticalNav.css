@@ -4,7 +4,7 @@
   width: var(--vertical-nav-width);
   height: 100%; /* Takes 100% height of .App-content-area */
   /* Gradient hue from the provided image */
-  background: linear-gradient(to bottom, #1a2a5a, #3a5a9a); /* Gradient based on image */
+  background: linear-gradient(to bottom, #c40414, #ef3131); /* Gradient based on image */
   padding: 24px 0;
   box-shadow: var(--shadow-md); /* Softer, more modern shadow */
   display: flex;
@@ -70,7 +70,7 @@
 }
 
 .vertical-nav ul li a:hover {
-  background-color: rgba(100, 149, 237, 0.2); /* Subtle hover with lighter blue accent color */
+  background-color: hwb(24 9% 24% / 0.2); /* Subtle hover with lighter blue accent color */
   color: #ffffff; /* Solid white text on hover */
 }
 
@@ -108,6 +108,64 @@
 .vertical-nav ul li a:hover .nav-icon,
 .vertical-nav ul li a.active-link .nav-icon {
   opacity: 1;
+}
+.vertical-nav {
+  width: var(--vertical-nav-width);
+  background-color: #e31e24; /* Mahindra Red */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 10px;
+  box-shadow: var(--shadow-md);
+}
+
+.logo-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.logo-container h5 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.vertical-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vertical-nav li {
+  margin-bottom: 12px;
+}
+
+.vertical-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.vertical-nav a:hover {
+  background-color: #b8161b; /* Darker red hover */
+}
+
+.active-link {
+  background-color: white;
+  color: #e31e24 !important;
+  font-weight: 600;
+}
+
+.nav-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* END frontend/src/components/VerticalNav/VerticalNav.css */
