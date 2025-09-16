@@ -75,7 +75,7 @@
 }
 
 .vertical-nav ul li a.active-link {
-  background-color: #6495ed; /* Use lighter blue accent color for active */
+  background-color: #f48e8e; /* Use lighter blue accent color for active */
   color: #ffffff; /* Solid white text for active link */
   font-weight: 600;
   box-shadow: var(--shadow-sm);
