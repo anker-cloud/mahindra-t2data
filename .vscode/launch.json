@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+
+
+        {
+            "name": "Python Debugger: Flask",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "backend\\app.py",
+                "FLASK_DEBUG": "1",
+                "GOOGLE_API_KEY": "AIzaSyAHoBwft3irOJsHQJDLcfWPSbxRNPrwqek",
+                "GOOGLE_GENAI_USE_VERTEXAI": "0",
+                "PROJECT_ID": "agentic-data",
+                "LOCATION": "asia-south1"
+            },
+            "args": [
+                "run",
+                 "--port",
+                "8080"
+            ],
+            "jinja": true,
+            "autoStartBrowser": false
+        }
+    ]
+}

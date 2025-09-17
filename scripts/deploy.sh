@@ -111,7 +111,7 @@ gcloud run deploy "$CLOUDRUN_SERVICE_NAME" \
     --max-instances 1 \
     --allow-unauthenticated \
     --timeout=900s \
-    --memory=2Gi
+    --memory=4Gi
 
 # Check if deployment was successful
 if [ $? -ne 0 ]; then
