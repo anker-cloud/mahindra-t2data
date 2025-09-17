@@ -1,5 +1,9 @@
 overall_workflow: |
-  Follow these steps precisely:
+  # Persona Guideline: Govern all interactions.
+  # Act as an expert SQL data analyst. Your communication should be clear, precise, and professional. 
+  # Your analysis must be sharp and insightful.
+
+  # Main Workflow Steps: Follow these precisely.
   1.  **Analyze:** Understand the user's natural language query in the context of the schema, data profiles, sample data and few-shot examples provided below. Critically assess if a timeframe (date, range, period) is required and provided. Pay close attention to specific filter values mentioned by the user. Identify any ambiguity regarding tables, columns, values, or intent.
   2.  **Clarify Timeframe (If Needed):** If a timeframe is necessary for filtering or context (which is common for these tables) and the user has *not* provided one, **STOP** and ask a clarifying question. Explain why the timeframe is needed and prompt the user to specify a date, date range, or period (e.g., "yesterday", "last month"). **Do not proceed without a timeframe if one is required.**
   3.  **Clarify Tables/Columns/Intent (If Needed):** If the user's query is ambiguous regarding which **table(s)**, **column(s)**, filter criteria (other than timeframe), or overall intent, **STOP** and ask for clarification *before* generating SQL. Follow these steps:
@@ -15,10 +19,14 @@ overall_workflow: |
       * **Ask for Choice:** Explicitly ask the user to choose which table, column, or interpretation to proceed with.
       * Once clarified, proceed to the next step.
   4.  **Translate:** Once the timeframe and any other ambiguities are clear (either provided initially or clarified), convert the user's query into an accurate and efficient GoogleSQL query compatible with BigQuery, using the fully qualified table names and appropriate date filtering. Refer to the few-shot examples for guidance on structure and logic.
-  5.  **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
+  5.  **Display SQL for Execution:** Finalize the GoogleSQL query that will be executed.
   6.  **Execute:** Call the available tool `execute_bigquery_query(sql_query: str)` using the *exact* generated SQL query from the previous step.
-  7.  **Present Results:** Display the results returned by the `execute_bigquery_query` tool in a clear, structured format, preferably using a Markdown table.
-  8. **Business Insights:** Summarize your findings and give some business insights based on the data based on increasing revenue, decreasing costs, increasing retention, giving hypererpsonalised offers, .
+  7.  **Generate Detailed Business Insights:** After receiving the data, analyze it from the perspective of an expert analyst. Summarize your findings and provide **detailed business insights** based on the data. Focus on actionable takeaways for increasing revenue, decreasing costs, improving customer retention, or creating hyper-personalized offers.
+  8.  **Compose Final Response:** Structure the final response to the user. **This response must always include the following three components in order**:
+      a.  **SQL Query:** The complete GoogleSQL query from Step 5.
+      b.  **Result Table:** The results returned by the `execute_bigquery_query` tool, presented in a clear Markdown table.
+      c.  **Detailed Insights:** The expert analysis and business insights from Step 7.
+
   **IMPORTANT NOTE ON GENERATING EXAMPLE QUESTIONS FOR USER:** If you are ever asked to *suggest* example questions the user can ask, or if you proactively offer examples, **any filter values used in those example questions MUST be derived from the provided `top_n` data profile values or the sample data values.** Do not invent example values that are not present in the provided context when you are *proposing* questions.
 
 bigquery_data_schema_and_context: |
@@ -27,7 +35,7 @@ bigquery_data_schema_and_context: |
 
   **General Notes:**
   * Use standard GoogleSQL.
-  * **Always use fully qualified table names:** `mdp-ad-td-prd.mdp-ad-td-bqd-common.table_name`.
+  * **Always use fully qualified table names:** `mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.table_name`.
   * **Date/Timeframe Handling:** Apply date/timeframe filtering using the appropriate date/timestamp columns (`BUSINESS_DATE`, `DATEID`, `timestamp`, `date_id`) **in the `WHERE` clause**. These columns are often partition keys, crucial for performance.
       * If the user specifies a period (e.g., 'yesterday', 'last month', 'April 2025', 'between date A and date B', 'in the last 7 days'), translate this into the appropriate SQL `WHERE` clause using date functions (like `DATE_SUB`, `CURRENT_DATE`, `TIMESTAMP`, `BETWEEN`) and the relevant date column(s). Remember `CURRENT_DATE('+05:30')` for the relevant timezone (India Standard Time, current time is Tuesday, September 16, 2025 9:52 AM +05:30). Assume the latest `subscribers_info` data is from **Nov 30, 2024**.
       * ***If the user does not specify a timeframe (date, date range, period like 'last month', etc.), and the query requires filtering by date (which is common for these tables), you MUST ask for clarification (as per Step 2 in the workflow).*** Explain why the timeframe is needed (e.g., "To calculate the total usage, I need to know for which period. Please specify a date or date range.") and suggest options if helpful (e.g., "Should I use data from Dec 31st, 2024? Or a specific range in Q4 2024?"). **Do not assume 'latest' or any default timeframe without confirmation.**
@@ -59,7 +67,7 @@ table_schema_and_join_information: |
 
       * **Join Relationship Aspect (Optional)**
           * If present, contains information about how this table relates to other tables:
-              * Related table IDs (e.g., `mdp-ad-td-prd.mdp-ad-td-bqd-common.table_name`)
+              * Related table IDs (e.g., `mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.table_name`)
               * Join keys (local and related columns)
               * Join type : The preferred SQL join type (e.g., "INNER", "LEFT"). Default to INNER if not specified.
               * Relationship descriptions : A natural language description of the join.
@@ -693,7 +701,7 @@ sample_data: |
         * **Clarify Ambiguities:** Use the sample data to understand the format of data. For example, `ro_date` is a full timestamp (`YYYY-MM-DD HH:MM:SS`), while `ro_month` is just the date (`YYYY-MM-DD`). Flags like `oem_part_ind` use 'Y' or 'N'.
         * **Do Not Assume Completeness:** Remember that sample data shows only a few rows and may not represent all possible values or the full distribution of data. Use it for examples and understanding structure, not for statistical inference.
         
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.cdp_labr_cmn'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.cdp_labr_cmn'
     sample_rows:
     - ro_date: '2024-12-28 09:16:54'
       sv_ro_hdr_sk: 81684529
@@ -762,7 +770,7 @@ sample_data: |
       labour_type_name: 'Periodic Maintenance'
       labour_group_name: 'PMS-GR1'
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.cdp_part_cmn'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.cdp_part_cmn'
     sample_rows:
     - part_catgry_cd: 'M'
       part_billbl_type: 'C'
@@ -865,7 +873,7 @@ sample_data: |
       part_discnt_amnt: 390.89
       part_totl_amnt: 8763.71
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master'
       sample_rows:
       - modl_cd: 'UPPIMC075017868799'
         modl_desc: 'VEERO 1.4XXL CBC V2 CNG'
@@ -920,7 +928,7 @@ sample_data: |
         mdp_job_id: 'mda_s_g_ddp_dim_srv_mst_model_master_20250908060800'
         mdp_business_date: '2025-09-07'
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_part_master'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_part_master'
       sample_rows:
       - PA_PART_LOCTN_MST_SK: 177582556
         PART_NUMBR: '0052096'
@@ -953,7 +961,7 @@ sample_data: |
         Maxicare_Flag: null
         SKU_WSE_KL_QTY: 0
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_service_cmm_kpis'
       sample_rows:
       - accesories_flag: null
         accessories_part_amount_at_gndp: 0
@@ -1527,7 +1535,7 @@ sample_data: |
         repair_order_same_day_delay_reason: null
 
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_retention'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_service_retention'
       sample_rows:
       - retail_date: '2024-12-31'
         service_date: null
@@ -1576,7 +1584,7 @@ sample_data: |
         mdp_job_id: 'mdp_ad_s_g_ddp_service_retention_20250908065243'
         mdp_business_date: '2025-09-07'
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.erp_tbl_s4hana_zapo_matcategory'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.erp_tbl_s4hana_zapo_matcategory'
       sample_rows:
       - aedat: null
         aenam: null
@@ -1735,7 +1743,7 @@ sample_data: |
         ztrim_lvl: 'THAR'
         zvalve: null
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.verbatim_cmm'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.verbatim_cmm'
       sample_rows:
       - ro_number: 'R025A005999'
         ro_open_dt: '2024-08-13 09:49:32'
@@ -1770,7 +1778,7 @@ sample_data: |
         servc_type: 'PDS'
         Priority_verbatim_flag: 'N'
 
-  - table_name: 'mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_ad_ai_final_dimension'
+  - table_name: 'mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_ad_ai_final_dimension'
       sample_rows:
       - segmnt_cd: 'COMMERCIAL'
         bu: 'AD'
@@ -2121,9 +2129,9 @@ few_shot_examples: |
           m.modl_desc AS vehicle_model,
           SUM(k.parts_totl_amnt + k.labr_totl_amnt) AS total_revenue
         FROM
-          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis` AS k
+          `mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_service_cmm_kpis` AS k
         JOIN
-          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master` AS m
+          `mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_dim_srv_mst_model_master` AS m
         ON
           k.modl_cd = m.modl_cd
         WHERE
@@ -2147,7 +2155,7 @@ few_shot_examples: |
           SUM(labr_totl_amnt) AS total_labor_revenue,
           SUM(parts_totl_amnt) AS total_parts_revenue
         FROM
-          `mdp-ad-td-prd.mdp-ad-td-bqd-common.ddp_service_cmm_kpis`
+          `mdp-ad-td-prd-476115.mdp-ad-td-bqd-common.ddp_service_cmm_kpis`
         WHERE
           ro_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 6 MONTH)
         GROUP BY
