@@ -4,11 +4,13 @@ from flask import Flask, send_from_directory, abort, jsonify, request, current_a
 from dotenv import load_dotenv
 import functools
 import time
+import sys
+import sqlalchemy
 
-# --- NEW: Centralized Logging Configuration ---
-# Moved from create_app() and set to DEBUG to see all detailed logs.
+# Centralized Logging Configuration
 logging.basicConfig(
-    level=logging.DEBUG,
+    stream=sys.stdout,
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -16,7 +18,7 @@ logging.basicConfig(
 from backend.utils import get_table_description, get_table_ddl_strings, get_total_rows, get_total_column_count
 
 # Load environment variables from .env file in the project root
-dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'env')
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 load_dotenv(dotenv_path)
 
 # Assuming data_agent is in the parent directory and accessible in PYTHONPATH
@@ -32,7 +34,6 @@ try:
     from google.adk.sessions.database_session_service import DatabaseSessionService
     from google.adk.sessions.in_memory_session_service import InMemorySessionService
     from google.genai import types as genai_types
-    import sqlalchemy
 except ImportError:
     logging.error("Could not import ADK components. Ensure 'google-adk' is installed.")
     Runner = None
@@ -52,12 +53,12 @@ if Runner and InMemorySessionService and root_agent:
         try:
             engine = sqlalchemy.create_engine(db_url)
             engine.connect()
-            print("Database connection successful.")
+            logging.info("Database connection successful.")
             session_service = DatabaseSessionService(db_url=db_url)
         except Exception as e:
-            print(f"Failed to connect to the database: {e}")
+            logging.warning(f"Failed to connect to the database, falling back to in-memory session: {e}")
             session_service = InMemorySessionService()
-        
+
         runner = Runner(
             app_name=APP_NAME,
             agent=root_agent,
@@ -214,9 +215,7 @@ def create_app():
         except Exception as e:
             logging.error(f"Error reading code file {filepath}: {str(e)}", exc_info=True)
             return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-    # --- REMOVED: logging.basicConfig(level=logging.INFO) ---
-    # This is now handled globally at the top of the file.
+    
     app.logger.info("Flask app created and configured.")
 
     @app.route('/', defaults={'path': ''})
@@ -226,6 +225,12 @@ def create_app():
         if not build_dir:
             logging.error("React build directory is not configured or not found.")
             return abort(404, description="React application not found. Build the frontend first.")
+        
+        # If the path is a file in the build directory, serve it.
+        if path != "" and os.path.exists(os.path.join(build_dir, path)):
+            return send_from_directory(build_dir, path)
+        
+        # Otherwise, serve the main index.html for client-side routing.
         index_html_path = os.path.join(build_dir, 'index.html')
         if os.path.exists(index_html_path):
             return send_from_directory(build_dir, 'index.html')
@@ -240,7 +245,5 @@ app = create_app()
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8080))
     debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
-    print(f"Starting Flask development server on http://0.0.0.0:{port} (debug={debug_mode})...")
+    logging.info(f"Starting Flask development server on http://0.0.0.0:{port} (debug={debug_mode})...")
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
-
-# - Demo changes
