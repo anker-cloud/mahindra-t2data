@@ -38,11 +38,57 @@ def json_serial_default(obj):
     #     return float(obj)
     raise TypeError (f"Type {type(obj)} not serializable")
 
+
+# --- ORIGINAL FUNCTION (Commented out for caching refactor) ---
+# The logic below was moved into the `_build_master_instructions` helper function.
+# This original function was inefficient because it would re-fetch and re-format
+# all the database schema and profile data on every single user message.
+"""
 def return_instructions_bigquery() -> str:
-    """
+    \"\"\"
     Fetches table metadata, data profiles (conditionally sample data), formats them,
     and injects them into the main instruction template.
+    \"\"\"
+    # 1. Fetch Table Metadata
+    table_metadata_raw = fetch_table_entry_metadata()
+    
+    # --- Formatting logic for table metadata ---
+    if not table_metadata_raw:
+        table_metadata_string_for_prompt = "Table metadata information is not available."
+    else:
+        # ... (original formatting logic) ...
+        table_metadata_string_for_prompt = "\n\n---\n\n".join(formatted_metadata)
+
+    # 2. Fetch Data Profiles
+    data_profiles_raw = fetch_bigquery_data_profiles()
+    # ... (original data fetching and formatting logic) ...
+    
+    # 3. Format the final instruction string
+    # ... (original YAML loading and string formatting logic) ...
+
+    final_instruction = instruction_template_from_yaml.format(
+        table_metadata=table_metadata_string_for_prompt,
+        data_profiles=data_profiles_string_for_prompt,
+        samples=samples_string_for_prompt
+    )
+    
+    logger.info(
+        f"[AGENT_INSTRUCTIONS] The agent is being initialized with the following "
+        f"final prompt:\n{'='*20}\n{final_instruction}\n{'='*20}"
+    )
+    return final_instruction
+"""
+
+
+# --- REFACTORED CODE FOR CACHING (Executes only once on server start) ---
+
+def _build_master_instructions() -> str:
     """
+    (Internal Helper) Fetches and formats all the static context data for the agent.
+    This expensive function is designed to run only ONCE when the server starts.
+    """
+    logger.info("Building master agent instructions... (This should only run once!)")
+    
     # 1. Fetch Table Metadata
     table_metadata_raw = fetch_table_entry_metadata()
     
@@ -72,7 +118,6 @@ def return_instructions_bigquery() -> str:
         formatted_profiles = []
         for profile in data_profiles_raw:
             try:
-                # Use json_serial_default to handle date/datetime objects
                 profile_str = json.dumps(profile, indent=2, ensure_ascii=False, default=json_serial_default)
             except TypeError as e: 
                 logger.warning(f"Could not serialize profile part: {e}. Profile: {profile}")
@@ -89,7 +134,6 @@ def return_instructions_bigquery() -> str:
         logger.info("Data profiles not found. Attempting to fetch sample data based on constants...")
         data_profiles_string_for_prompt = "Data profile information is not available. Please refer to the sample data below."
         
-        # fetch_sample_data_for_tables uses constants (PROJECT_ID, DATASET_NAME, TABLE_NAMES) internally
         sample_data_raw = fetch_sample_data_for_tables(num_rows=3) 
         
         # --- Formatting logic for sample data ---
@@ -98,65 +142,58 @@ def return_instructions_bigquery() -> str:
             formatted_samples = []
             for item in sample_data_raw:
                 try:
-                    # Use json_serial_default to handle date/datetime objects
                     sample_rows_str = json.dumps(item['sample_rows'], indent=2, ensure_ascii=False, default=json_serial_default)
                 except TypeError as e: 
                     logger.warning(f"Could not serialize sample_rows for table {item.get('table_name')}: {e}. Sample rows: {item.get('sample_rows')}")
                     sample_rows_str = f"Sample rows for table {item.get('table_name')} contain non-serializable data."
 
                 formatted_samples.append(
-                    f"**Sample Data for table `{item['table_name']}` (first {len(item.get('sample_rows',[]))} rows):**\n" # Dynamically show row count
+                    f"**Sample Data for table `{item['table_name']}` (first {len(item.get('sample_rows',[]))} rows):**\n"
                     f"```json\n{sample_rows_str}\n```"
                 )
             samples_string_for_prompt = "\n\n---\n\n".join(formatted_samples)
         else:
             logger.warning(f"Could not fetch sample data for the target scope: {PROJECT_ID}.{DATASET_NAME} (Tables: {TABLE_NAMES if TABLE_NAMES else 'All'}).")
             samples_string_for_prompt = f"Could not fetch sample data for the target scope: {PROJECT_ID}.{DATASET_NAME} (Tables: {TABLE_NAMES if TABLE_NAMES else 'All'})."
-      
+    
     # 3. Format the final instruction string
-    # Load instruction template sections from YAML
     script_dir = os.path.dirname(os.path.abspath(__file__))
     yaml_file_path = os.path.join(script_dir, 'instructions.yaml')
     try:
-        with open(yaml_file_path, 'r') as f: #use absolute path 
+        with open(yaml_file_path, 'r') as f:
             instructions_yaml = yaml.safe_load(f)
-            overall_workflow = instructions_yaml.get('overall_workflow', '')
-            bigquery_data_schema_and_context = instructions_yaml.get('bigquery_data_schema_and_context', '')
-            table_schema_and_join_information = instructions_yaml.get('table_schema_and_join_information', '')
-            critical_joining_logic_and_context = instructions_yaml.get('critical_joining_logic_and_context', '')
-            data_profile_information = instructions_yaml.get('data_profile_information', '')
-            sample_data = instructions_yaml.get('sample_data', '')
-            usecase_specific_table_information = instructions_yaml.get('usecase_specific_table_information', '')
-            few_shot_examples = instructions_yaml.get('few_shot_examples', '')
-
-            # Concatenate sections in the desired order
             instruction_template_from_yaml = "\n".join([
-                overall_workflow,
-                bigquery_data_schema_and_context,
-                table_schema_and_join_information,
-                critical_joining_logic_and_context,
-                data_profile_information,
-                sample_data,
-                usecase_specific_table_information,
-                few_shot_examples
+                instructions_yaml.get('overall_workflow', ''),
+                instructions_yaml.get('bigquery_data_schema_and_context', ''),
+                instructions_yaml.get('table_schema_and_join_information', ''),
+                instructions_yaml.get('critical_joining_logic_and_context', ''),
+                instructions_yaml.get('data_profile_information', ''),
+                instructions_yaml.get('sample_data', ''),
+                instructions_yaml.get('usecase_specific_table_information', ''),
+                instructions_yaml.get('few_shot_examples', '')
             ])
-
             if not instruction_template_from_yaml.strip():
-                 logger.error("Instruction template loaded from YAML is empty.")
-                 raise ValueError("Instruction template loaded from YAML is empty.")
+                raise ValueError("Instruction template loaded from YAML is empty.")
+    except Exception as e:
+        logger.error(f"Error loading or processing instructions.yaml: {e}")
+        raise
 
-    except FileNotFoundError:
-        logger.error("instructions.yaml not found.")
-        raise FileNotFoundError("instructions.yaml not found.")
-    except yaml.YAMLError as e:
-        logger.error(f"Error loading instructions.yaml: {e}")
-        raise yaml.YAMLError(f"Error loading instructions.yaml: {e}")
-
-    # 3. Format the final instruction string
     final_instruction = instruction_template_from_yaml.format(
         table_metadata=table_metadata_string_for_prompt,
         data_profiles=data_profiles_string_for_prompt,
         samples=samples_string_for_prompt
     )
     
+    logger.info(
+        f"[AGENT_INSTRUCTIONS] Caching complete. Final prompt length: {len(final_instruction)} characters."
+    )
     return final_instruction
+
+# This variable is populated only ONCE when the Python module is first imported.
+CACHED_INSTRUCTIONS = _build_master_instructions()
+
+def return_instructions_bigquery() -> str:
+    """
+    Returns the pre-cached master instructions instantly from a module-level variable.
+    """
+    return CACHED_INSTRUCTIONS

@@ -123,6 +123,8 @@ def create_app():
         session_id = None # Initialize session_id to None
         try:
             req_data = request.get_json()
+            # --- 📍 DEBUG POINT 1: RAW REQUEST RECEIVED ---
+            logging.info(f"[BACKEND] 1. Received raw request on /api/chat: {req_data}")
             user_id = req_data.get('user_id') or USER_ID # Use default user ID if not provided
             session_id = req_data.get('session_id') # Get session_id from request
             message_text = req_data.get('message', {}).get('message') # Get message text
@@ -158,6 +160,9 @@ def create_app():
                 parts=[genai_types.Part(text=message_text)],
                 role='user' # Assuming user role for incoming messages
             )
+            # --- 📍 DEBUG POINT 2: INPUT TO ADK AGENT ---
+            # Log the exact parameters being passed to the ADK runner. 
+            logging.info(f"[BACKEND] 2. Calling ADK runner with session_id='{session_id}', user_id='{user_id}', message='{message_text}'")
 
             agent_responses = []
             # Use the globally initialized runner
@@ -166,6 +171,9 @@ def create_app():
                 session_id=session_id,
                 new_message=new_message_content,
             ):
+                # --- 📍 DEBUG POINT 3: RAW OUTPUT FROM ADK AGENT ---
+                # Log each event as it's streamed from the agent. 
+                logging.info(f"[AGENT_EVENT] Received event: {event}")
                 if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
                     for part in event.content.parts:
                         if hasattr(part, 'text') and part.text:
@@ -176,6 +184,11 @@ def create_app():
 
             if not agent_responses:
                 print(f"No text response parts found in ADK events for session {session_id}")
+            # --- 📍 DEBUG POINT 4: FINAL RESPONSE TO FRONTEND ---
+            # Log the complete, formatted payload just before sending it back.
+            # This shows you the exact data the frontend will receive.
+            final_payload = {"session_id": session_id, "messages": agent_responses}
+            logging.info(f"[BACKEND] Sending final response to frontend: {final_payload}")
 
             # Return the session_id and messages
             return jsonify({"session_id": session_id, "messages": agent_responses}), 200

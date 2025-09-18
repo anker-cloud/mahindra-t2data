@@ -49,6 +49,10 @@ def execute_bigquery_query(sql_query: str) -> list[dict]:
     start_time = time.time()
 
     try:
+        # --- 📍 AGENT DEBUG POINT 2: LOG THE LLM-GENERATED SQL ---
+        # This shows the exact SQL query the LLM decided to run based on the
+        # user's question and the instructions from Debug Point 1.
+        logger.info(f"[AGENT_TOOL] Executing LLM-generated query:\n---\n{sql_query}\n---")
         client = bigquery.Client(project=PROJECT_ID)
         logger.info("BigQuery client created successfully.")
 
@@ -63,6 +67,14 @@ def execute_bigquery_query(sql_query: str) -> list[dict]:
         logger.info("Processing results...")
         data = [dict(row.items()) for row in results]
         num_rows = len(data)
+        # --- 📍 AGENT DEBUG POINT 3: LOG THE RESULT FROM BIGQUERY ---
+        # This shows the data returned from BigQuery before it's sent back to the
+        # LLM for summarization. Truncating for cleaner logs.
+        log_data_preview = data[:5] # Log max 5 rows to avoid flooding the console
+        logger.info(
+            f"[AGENT_TOOL] Query successful. Fetched {num_rows} rows. "
+            f"Preview:\n---\n{log_data_preview}\n---"
+        )
 
         end_time = time.time()
         duration = end_time - start_time

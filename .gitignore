@@ -1,0 +1,39 @@
+# Python specific files
+# ---------------------------------
+# Compiled bytecode
+*.pyc
+__pycache__/
+
+# Virtual environment
+venv/
+
+# Environment variables - DO NOT COMMIT
+.env
+
+
+# Database files
+# ---------------------------------
+*.db
+my_agent_data.db
+
+
+# Node.js / React specific files
+# ---------------------------------
+# Dependencies folder
+node_modules/
+
+# Production build output
+build/
+
+# Cache and log files
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# VS Code specific files
+# ---------------------------------
+# Ignore all, but keep launch configurations
+.vscode/*
+!.vscode/launch.json
