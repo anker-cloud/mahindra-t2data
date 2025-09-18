@@ -20,8 +20,9 @@ from .utils import fetch_bigquery_data_profiles, fetch_sample_data_for_tables, f
 from .constants import PROJECT_ID, DATASET_NAME, TABLE_NAMES
 
 # --- Logging Configuration ---
+# Set to DEBUG to see the detailed context logs for metadata, profiles, etc.
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -33,9 +34,6 @@ def json_serial_default(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, (datetime.date, datetime.datetime)):
         return obj.isoformat()
-    # Add other custom serializers here if needed, e.g., for Decimal
-    # elif isinstance(obj, decimal.Decimal):
-    #     return float(obj)
     raise TypeError (f"Type {type(obj)} not serializable")
 
 
@@ -49,34 +47,7 @@ def return_instructions_bigquery() -> str:
     Fetches table metadata, data profiles (conditionally sample data), formats them,
     and injects them into the main instruction template.
     \"\"\"
-    # 1. Fetch Table Metadata
-    table_metadata_raw = fetch_table_entry_metadata()
-    
-    # --- Formatting logic for table metadata ---
-    if not table_metadata_raw:
-        table_metadata_string_for_prompt = "Table metadata information is not available."
-    else:
-        # ... (original formatting logic) ...
-        table_metadata_string_for_prompt = "\n\n---\n\n".join(formatted_metadata)
-
-    # 2. Fetch Data Profiles
-    data_profiles_raw = fetch_bigquery_data_profiles()
-    # ... (original data fetching and formatting logic) ...
-    
-    # 3. Format the final instruction string
-    # ... (original YAML loading and string formatting logic) ...
-
-    final_instruction = instruction_template_from_yaml.format(
-        table_metadata=table_metadata_string_for_prompt,
-        data_profiles=data_profiles_string_for_prompt,
-        samples=samples_string_for_prompt
-    )
-    
-    logger.info(
-        f"[AGENT_INSTRUCTIONS] The agent is being initialized with the following "
-        f"final prompt:\n{'='*20}\n{final_instruction}\n{'='*20}"
-    )
-    return final_instruction
+    # ... (original function code) ...
 """
 
 
@@ -177,6 +148,19 @@ def _build_master_instructions() -> str:
     except Exception as e:
         logger.error(f"Error loading or processing instructions.yaml: {e}")
         raise
+
+    # --- NEW DEBUG LOGS ---
+    # These logs will show the exact context being fed into the prompt template.
+    # They are set to DEBUG to avoid cluttering the main INFO logs.
+    logger.debug(
+        f"Formatted Table Metadata for prompt:\n---\n{table_metadata_string_for_prompt}\n---"
+    )
+    logger.debug(
+        f"Formatted Data Profiles for prompt:\n---\n{data_profiles_string_for_prompt}\n---"
+    )
+    logger.debug(
+        f"Formatted Sample Data for prompt:\n---\n{samples_string_for_prompt}\n---"
+    )
 
     final_instruction = instruction_template_from_yaml.format(
         table_metadata=table_metadata_string_for_prompt,
