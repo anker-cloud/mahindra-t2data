@@ -7,25 +7,16 @@ import logging
 from proto.marshal.collections.repeated import RepeatedComposite
 from proto.marshal.collections.maps import MapComposite
 
-# --- Logging Configuration ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# --- CORRECT LOGGING SETUP ---
+# Get a logger instance for this module. It will inherit its configuration
+# (level, format, stream) from the central setup in app.py.
+# The incorrect logging.basicConfig() call has been removed.
 logger = logging.getLogger(__name__)
 
 
 def fetch_bigquery_data_profiles() -> list[dict]:
     """
     Fetches data profile information from a BigQuery table specified in constants.
-    The target dataset, optional table names, and the source profiles table
-    are defined in the .constants module (DATASET_NAME, TABLE_NAMES, DATA_PROFILES_TABLE_FULL_ID).
-
-    Returns:
-        A list of dictionaries, where each dictionary represents the data profile
-        for a single column in a table. Returns an empty list if no profiles
-        are found or if an error occurs.
     """
     start_time = time.time()
     # Use constants for dataset_name, table_names, and data_profiles_table_full_id
@@ -92,8 +83,6 @@ def fetch_bigquery_data_profiles() -> list[dict]:
 
     job_config = bigquery.QueryJobConfig(query_parameters=query_params)
 
-    profiles_data = []
-
     try:
         query_job = client.query(final_query, job_config=job_config)
         results = query_job.result()  # Wait for the query to complete
@@ -103,25 +92,16 @@ def fetch_bigquery_data_profiles() -> list[dict]:
         profiles_data = []  # Initialize the final list for filtered profiles
         for profile in raw_profiles_data:
             percent_null_value = profile.get('percent_null')
-            description_value = profile.get('description')
 
-            remove_profile = False
-            reason = ""
-
-            # Check condition 1: percent_null > 80
+            # Check condition: percent_null > 90
             if isinstance(percent_null_value, (float, int)) and percent_null_value > 90:
-                remove_profile = True
-                reason = f"percent_null > 80% (Value: {percent_null_value}%)"
-
-            if remove_profile:
                 continue  # Skip adding this profile to the final list
 
             # Add profile if it doesn't meet any removal condition
             profiles_data.append(profile)
 
         num_profiles_fetched = len(profiles_data)
-        end_time = time.time()
-        duration = end_time - start_time
+        duration = time.time() - start_time
         logger.info(
             f"--- Successfully fetched {num_profiles_fetched} column profiles "
             f"(Duration: {duration:.2f} seconds) ---"
@@ -129,29 +109,20 @@ def fetch_bigquery_data_profiles() -> list[dict]:
         return profiles_data
 
     except Exception as e:
-        end_time = time.time()
-        duration = end_time - start_time
+        duration = time.time() - start_time
         logger.error(
             f"--- Failed to fetch data profiles after {duration:.2f} seconds ---",
             exc_info=True  # Automatically add exception info (like traceback)
         )
         return []
 
-def fetch_sample_data_for_tables(
-    num_rows: int = 3
-) -> list[dict]:
+def fetch_sample_data_for_tables(num_rows: int = 3) -> list[dict]:
     """
-    Fetches a few sample rows from tables defined in constants (PROJECT_ID, DATASET_NAME, TABLE_NAMES),
-    Args:
-        num_rows: The number of sample rows to fetch for each table.
-    Returns:
-        A list of dictionaries, where each dictionary contains 'table_name' (fully qualified)
-        and 'sample_rows'. Returns an empty list if no data can be fetched or an error occurs.
+    Fetches a few sample rows from tables defined in constants.
     """
     start_time = time.time()
     sample_data_results: list[dict] = []
 
-    # Use constants directly
     project_id = PROJECT_ID
     dataset_id = DATASET_NAME
     table_names_list = TABLE_NAMES
@@ -165,22 +136,17 @@ def fetch_sample_data_for_tables(
         logger.error(f"Failed to create BigQuery client for project {project_id}: {e}", exc_info=True)
         return sample_data_results
 
-    tables_to_fetch_samples_from_ids: list[str] = [] # Stores table_id strings for the target dataset, changed from List[str]
+    tables_to_fetch_samples_from_ids: list[str] = []
 
-    if table_names_list and len(table_names_list) > 0: # If specific table names are provided in constants
+    if table_names_list and len(table_names_list) > 0: # If specific table names are provided
         tables_to_fetch_samples_from_ids = table_names_list
         logger.info(f"Fetching sample data for specified tables in {project_id}.{dataset_id}: {table_names_list}")
-    else: # If TABLE_NAMES in constants is empty, fetch for all tables in the dataset
+    else: # If TABLE_NAMES is empty, fetch for all tables in the dataset
         logger.info(f"Fetching sample data for all tables in dataset: {project_id}.{dataset_id}")
         try:
             dataset_ref = client.dataset(dataset_id, project=project_id)
             bq_tables = client.list_tables(dataset_ref)
-            for bq_table in bq_tables:
-                # Filter for base tables only
-                if bq_table.table_type == 'TABLE':
-                    tables_to_fetch_samples_from_ids.append(bq_table.table_id)
-                else:
-                    logger.info(f"Skipping non-base table: {bq_table.project}.{bq_table.dataset_id}.{bq_table.table_id} (Type: {bq_table.table_type})")
+            tables_to_fetch_samples_from_ids = [bq_table.table_id for bq_table in bq_tables if bq_table.table_type == 'TABLE']
         except Exception as e:
             logger.error(f"Error listing tables for {project_id}.{dataset_id}: {e}", exc_info=True)
             return sample_data_results
@@ -192,14 +158,9 @@ def fetch_sample_data_for_tables(
     for table_id_str in tables_to_fetch_samples_from_ids:
         full_table_name = f"{project_id}.{dataset_id}.{table_id_str}"
         try:
-            logger.info(f"Fetching sample data for table (using list_rows): {full_table_name}")
-
+            logger.info(f"Fetching sample data for table: {full_table_name}")
             table_reference = TableReference.from_string(full_table_name, default_project=project_id)
-
-            # Fetch rows using list_rows.
-            # No selected_fields means all fields will be fetched.
             rows_iterator = client.list_rows(table_reference, max_results=num_rows)
-
             table_sample_rows = [dict(row.items()) for row in rows_iterator]
 
             if table_sample_rows:
@@ -208,50 +169,35 @@ def fetch_sample_data_for_tables(
                     "sample_rows": table_sample_rows
                 })
             else:
-                logger.info(f"No sample data found for table '{full_table_name}' using list_rows.")
+                logger.info(f"No sample data found for table '{full_table_name}'.")
         except Exception as e:
-            logger.error(f"Error fetching sample data for table {full_table_name} using list_rows: {e}", exc_info=True)
-            # Continue processing other tables if one fails
+            logger.error(f"Error fetching sample data for table {full_table_name}: {e}", exc_info=True)
             continue
 
-    end_time = time.time()
-    duration = end_time - start_time
+    duration = time.time() - start_time
     logger.info(
-        f"--- Successfully fetched {len(sample_data_results)} sample data "
+        f"--- Successfully fetched {len(sample_data_results)} sample data sets "
         f"(Duration: {duration:.2f} seconds) ---"
     )
-
     return sample_data_results
 
 
-
 def convert_proto_to_dict(obj):
-    # if the type is MapComposite
     if isinstance(obj, MapComposite):
         return {k: convert_proto_to_dict(v) for k, v in obj.items()}
-    # if the type is RepeatedComposite
     elif isinstance(obj, RepeatedComposite):
         return [convert_proto_to_dict(elem) for elem in obj]
-    # All other types
     else:
         return obj
 
-
 def fetch_table_entry_metadata() -> list[dict]:
     """
-    Fetches complete metadata (schema, tags, aspects, etc.) for table entries from Dataplex Catalog using EntryView.FULL.
-    If TABLE_NAMES is empty, fetches for all tables; otherwise, fetches only for specified tables.
-    Returns: List of entry dictionaries with formatted metadata including all aspects
+    Fetches complete metadata for table entries from Dataplex Catalog.
     """
     start_time = time.time()
-    project_id_val = PROJECT_ID
-    location_val = LOCATION
-    dataset_id_val = DATASET_NAME
-    table_names_val = TABLE_NAMES
-
     logger.info(
-        f"Fetching ALL entry metadata for project='{project_id_val}', location='{location_val}', "
-        f"dataset='{dataset_id_val}', tables='{table_names_val if table_names_val else 'All'}'"
+        f"Fetching Dataplex entry metadata for project='{PROJECT_ID}', location='{LOCATION}', "
+        f"dataset='{DATASET_NAME}', tables='{TABLE_NAMES if TABLE_NAMES else 'All'}'"
     )
     all_entry_metadata: list[dict] = []
 
@@ -261,28 +207,25 @@ def fetch_table_entry_metadata() -> list[dict]:
         logger.error(f"Failed to create Dataplex CatalogServiceClient: {e}", exc_info=True)
         return all_entry_metadata
 
-    entry_group_name = f"projects/{project_id_val}/locations/{location_val}/entryGroups/@bigquery"
     target_entry_names: list[str] = []
 
-    if table_names_val and len(table_names_val) > 0:
-        for table_name in table_names_val:
-            entry_id_for_bq = f"bigquery.googleapis.com/projects/{project_id_val}/datasets/{dataset_id_val}/tables/{table_name}"
+    if TABLE_NAMES:
+        entry_group_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/entryGroups/@bigquery"
+        for table_name in TABLE_NAMES:
+            entry_id_for_bq = f"bigquery.googleapis.com/projects/{PROJECT_ID}/datasets/{DATASET_NAME}/tables/{table_name}"
             target_entry_names.append(f"{entry_group_name}/entries/{entry_id_for_bq}")
     else:
-        logger.info(f"Listing all entries in entry group '{entry_group_name}' to find tables in dataset '{dataset_id_val}'.")
+        logger.info(f"Listing all entries in project '{PROJECT_ID}' to find tables in dataset '{DATASET_NAME}'.")
         try:
-            search_entries_request = dataplex_v1.SearchEntriesRequest(
-            page_size=100,
-            # Required field, will by default limit search scope to organization under which the project is located
-            name=f"projects/{project_id_val}/locations/global",
-            # Optional field, will further limit search scope only to specified project
-            scope=f"projects/{project_id_val}",
-            query=f"name:projects/{project_id_val}/datasets/{dataset_id_val}/tables/",
-        )
-            for entry in client.search_entries(request=search_entries_request):
+            search_request = dataplex_v1.SearchEntriesRequest(
+                name=f"projects/{PROJECT_ID}/locations/global",
+                scope=f"projects/{PROJECT_ID}",
+                query=f"name:projects/{PROJECT_ID}/datasets/{DATASET_NAME}/tables/",
+            )
+            for entry in client.search_entries(request=search_request):
                 target_entry_names.append(entry.dataplex_entry.name)
         except Exception as e:
-            logger.error(f"Error listing entries for entry group {entry_group_name}: {e}", exc_info=True)
+            logger.error(f"Error listing Dataplex entries: {e}", exc_info=True)
 
     if not target_entry_names:
         logger.info("No target entries identified for fetching entry metadata.")
@@ -291,39 +234,29 @@ def fetch_table_entry_metadata() -> list[dict]:
     for entry_name in target_entry_names:
         try:
             logger.debug(f"Getting entry: {entry_name} with EntryView.ALL")
-            get_entry_request = dataplex_v1.GetEntryRequest(
-                name=entry_name,
-                view=dataplex_v1.EntryView.ALL
-            )
-            entry = client.get_entry(request=get_entry_request)
-
-            # Extract all aspects data
-            aspects_data = {}
-            if entry.aspects:
-                for aspect_key, aspect in entry.aspects.items():
-                    aspect_data_dict = {}
-                    if hasattr(aspect, 'data') and aspect.data:
-                        for key, value_wrapper_proto in aspect.data.items():
-                            aspect_data_dict[key] = convert_proto_to_dict(value_wrapper_proto)
-                    if aspect_data_dict:
-                        aspects_data[aspect_key] = aspect_data_dict
-
-            # Create metadata dictionary with all aspects
-            metadata = {
-                'table_name': entry_name.split('/')[-1],
-                'aspects': aspects_data
+            get_request = dataplex_v1.GetEntryRequest(name=entry_name, view=dataplex_v1.EntryView.ALL)
+            entry = client.get_entry(request=get_request)
+            
+            aspects_data = {
+                aspect_key: {
+                    key: convert_proto_to_dict(value_proto)
+                    for key, value_proto in aspect.data.items()
+                }
+                for aspect_key, aspect in entry.aspects.items() if hasattr(aspect, 'data') and aspect.data
             }
 
-            all_entry_metadata.append(metadata)
+            all_entry_metadata.append({
+                'table_name': entry_name.split('/')[-1],
+                'aspects': aspects_data
+            })
             logger.debug(f"Fetched ALL entry metadata for '{entry_name}'")
         except Exception as e:
             logger.error(f"Error fetching FULL entry metadata for entry {entry_name}: {e}", exc_info=True)
             continue
 
-    end_time = time.time()
-    duration = end_time - start_time
+    duration = time.time() - start_time
     logger.info(
-        f"--- Successfully fetched {len(all_entry_metadata)} entry metadata "
+        f"--- Successfully fetched {len(all_entry_metadata)} entry metadata sets "
         f"(Duration: {duration:.2f} seconds) ---"
     )
     return all_entry_metadata

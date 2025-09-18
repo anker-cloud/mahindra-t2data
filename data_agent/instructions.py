@@ -19,15 +19,11 @@ from .custom_tools import execute_bigquery_query
 from .utils import fetch_bigquery_data_profiles, fetch_sample_data_for_tables, fetch_table_entry_metadata
 from .constants import PROJECT_ID, DATASET_NAME, TABLE_NAMES
 
-# --- Logging Configuration ---
-# Set to DEBUG to see the detailed context logs for metadata, profiles, etc.
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# --- CORRECT LOGGING SETUP ---
+# Get a logger instance for this module. It will inherit its configuration
+# (level, format, stream) from the central setup in app.py.
+# The incorrect logging.basicConfig() call has been removed.
 logger = logging.getLogger(__name__)
-
 
 
 def json_serial_default(obj):
@@ -36,22 +32,6 @@ def json_serial_default(obj):
         return obj.isoformat()
     raise TypeError (f"Type {type(obj)} not serializable")
 
-
-# --- ORIGINAL FUNCTION (Commented out for caching refactor) ---
-# The logic below was moved into the `_build_master_instructions` helper function.
-# This original function was inefficient because it would re-fetch and re-format
-# all the database schema and profile data on every single user message.
-"""
-def return_instructions_bigquery() -> str:
-    \"\"\"
-    Fetches table metadata, data profiles (conditionally sample data), formats them,
-    and injects them into the main instruction template.
-    \"\"\"
-    # ... (original function code) ...
-"""
-
-
-# --- REFACTORED CODE FOR CACHING (Executes only once on server start) ---
 
 def _build_master_instructions() -> str:
     """
@@ -90,7 +70,7 @@ def _build_master_instructions() -> str:
         for profile in data_profiles_raw:
             try:
                 profile_str = json.dumps(profile, indent=2, ensure_ascii=False, default=json_serial_default)
-            except TypeError as e: 
+            except TypeError as e:
                 logger.warning(f"Could not serialize profile part: {e}. Profile: {profile}")
                 profile_str = f"Profile for column '{profile.get('source_column_name', profile.get('column_name'))}' in table '{profile.get('source_table_id')}' contains non-serializable data."
 
@@ -105,7 +85,7 @@ def _build_master_instructions() -> str:
         logger.info("Data profiles not found. Attempting to fetch sample data based on constants...")
         data_profiles_string_for_prompt = "Data profile information is not available. Please refer to the sample data below."
         
-        sample_data_raw = fetch_sample_data_for_tables(num_rows=3) 
+        sample_data_raw = fetch_sample_data_for_tables(num_rows=3)
         
         # --- Formatting logic for sample data ---
         if sample_data_raw:
@@ -114,7 +94,7 @@ def _build_master_instructions() -> str:
             for item in sample_data_raw:
                 try:
                     sample_rows_str = json.dumps(item['sample_rows'], indent=2, ensure_ascii=False, default=json_serial_default)
-                except TypeError as e: 
+                except TypeError as e:
                     logger.warning(f"Could not serialize sample_rows for table {item.get('table_name')}: {e}. Sample rows: {item.get('sample_rows')}")
                     sample_rows_str = f"Sample rows for table {item.get('table_name')} contain non-serializable data."
 
@@ -149,9 +129,7 @@ def _build_master_instructions() -> str:
         logger.error(f"Error loading or processing instructions.yaml: {e}")
         raise
 
-    # --- NEW DEBUG LOGS ---
     # These logs will show the exact context being fed into the prompt template.
-    # They are set to DEBUG to avoid cluttering the main INFO logs.
     logger.debug(
         f"Formatted Table Metadata for prompt:\n---\n{table_metadata_string_for_prompt}\n---"
     )
