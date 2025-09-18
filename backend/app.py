@@ -242,3 +242,5 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
     print(f"Starting Flask development server on http://0.0.0.0:{port} (debug={debug_mode})...")
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
+
+# - Demo changes
