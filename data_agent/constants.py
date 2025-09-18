@@ -14,7 +14,7 @@
 
 MODEL="gemini-2.5-pro-preview-03-25" # Identifier for the specific generative model to be used by the agent. (e.g., "gemini-2.5-pro-preview-03-25")
 # MODEL="gemini-2.5-flash-preview-04-17"
-PROJECT_ID="agentic-data" # The Google Cloud Project ID that contains the BigQuery datasets and tables to be analyzed. (e.g., "my-gcp-project-123")
+PROJECT_ID="mdp-ad-td-prd-476115" # The Google Cloud Project ID that contains the BigQuery datasets and tables to be analyzed. (e.g., "my-gcp-project-123")
 LOCATION="asia-south1" # The geographical location of the BigQuery datasets and tables to be analyzed (e.g., "US", "asia-northeast3")
 DATASET_NAME="mdp_ad_td_bqd_common" # The target BigQuery dataset name to be analyzed or for which data profiles are fetched. (e.g., "sales_data")
 TABLE_NAMES=[] # Optional list of specific table names within DATASET_NAME. If empty, operations might apply to all tables in the dataset. (e.g., ["orders", "customers"] or [])
