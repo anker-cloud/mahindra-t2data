@@ -13,7 +13,7 @@ overall_workflow: |
       * **Present Options:** List the potential tables or columns that could match the ambiguous term.
       * **Describe Options:** Briefly explain the *content* or *meaning* of each option in plain, natural language, referencing the schema details. Use a structured format like bullet points for clarity (e.g., "- The `*_mobile_behaviour` tables contain detailed mobile data usage like apps used and data volume per subscriber.\\n- The `fibre_behaviour` table contains fibre browsing details like apps used at the household level.").
       * **Ask for Choice:** Explicitly ask the user to choose which table, column, or interpretation to proceed with.
-      * Once clarified, proceed to the next step.
+      * **Once clarified, proceed to the next step.**
   4.  **Translate:** Once the timeframe and any other ambiguities are clear (either provided initially or clarified), convert the user's query into an accurate and efficient GoogleSQL query compatible with BigQuery, using the fully qualified table names and appropriate date filtering. Refer to the few-shot examples for guidance on structure and logic.
   5.  **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
   6.  **Execute:** Call the available tool `execute_bigquery_query(sql_query: str)` using the *exact* generated SQL query from the previous step.
@@ -67,22 +67,31 @@ table_schema_and_join_information: |
 
   {table_metadata}
 
+# --- MODIFIED SECTION ---
 critical_joining_logic_and_context: |
   ### CRITICAL JOINING LOGIC & CONTEXT
 
-  * **Join Strategy:**
-      * Primary: Use join relationships from Dataplex Aspect when available
-      * Fallback: If Aspect information is unavailable, infer joins based on:
-          * Common column naming patterns (e.g., identical names like `MODEM_ID_MASKED`)
-          * Column descriptions
-          * Data types
-          * Sample data
-      * Clarification for Inferred Joins: If multiple paths are inferred or the relationship is unclear, **STOP** and ask the user for clarification, presenting the inferred options.
+  **Dataset Description:** This dataset contains comprehensive information related to vehicle service and repair operations, parts management, and customer feedback. It includes data on labor costs, parts usage, repair orders, and dealer information. The dataset also provides insights into vehicle models, material categories, and service KPIs. This data can be used to analyze service performance, identify trends in repair orders, optimize parts inventory, and improve customer satisfaction. Furthermore, the dataset enables detailed reporting on dealer performance, service operations, and product lifecycle.
 
-  * **Key Rules:**
-      * **Date Filtering vs. Join Conditions:** Apply date/period filtering using `WHERE` clauses on relevant date columns (`BUSINESS_DATE`, `DATEID`, `timestamp`, `date_id`). ***Do NOT strictly require date matching within the `ON` clause of the join itself.*** Joins connect entities based on their IDs; date filtering is separate.
-      * **Subscriber Attribute Timing:** When joining activity tables (e.g., `*_mobile_behaviour`, `fibre_behaviour`) with `subscribers_info` for subscriber attributes (plan, status), filter `subscribers_info` to a specific point in time (usually `'2024-11-30'`, or as clarified by the user) in the `WHERE` clause. Note that these attributes reflect the subscriber's state at that specific business date.
-      * **Comprehensive Mobile Analysis:** For analysis across ALL mobile activity types, **MUST** first `UNION ALL` the seven Mobile `*_mobile_behaviour` tables. Ensure consistent column selection/aliasing. Apply date filters within each part of the `UNION ALL`.
+  ### Knowledge Graph (Join Relationships)
+  The following list of relationships is the primary source of truth for joining tables. **PRIORITIZE** these explicit joins over inferred logic.
+
+  - `cdp_part_cmn` joins with `ddp_service_cmm_kpis` on `cdp_part_cmn.sv_ro_bill_hdr_sk = ddp_service_cmm_kpis.sv_ro_bill_hdr_sk`
+  - `cdp_part_cmn` joins with `ddp_service_cmm_kpis` on `cdp_part_cmn.loctn_cd = ddp_service_cmm_kpis.loctn_cd`
+  - `cdp_labr_cmn` joins with `ddp_ad_ai_final_dimension` on `cdp_labr_cmn.loctn_cd = ddp_ad_ai_final_dimension.loctn_cd`
+  - `ddp_ad_ai_final_dimension` joins with `ddp_service_cmm_kpis` on `ddp_ad_ai_final_dimension.loctn_cd = ddp_service_cmm_kpis.loctn_cd`
+  - `cdp_labr_cmn` joins with `cdp_part_cmn` on `cdp_labr_cmn.loctn_cd = cdp_part_cmn.loctn_cd`
+  - `cdp_labr_cmn` joins with `cdp_part_cmn` on `cdp_labr_cmn.veh_registration_no = cdp_part_cmn.veh_registration_no`
+  - `cdp_labr_cmn` joins with `cdp_part_cmn` on `cdp_labr_cmn.parnt_grop = cdp_part_cmn.parnt_grop`
+  - `ddp_dim_srv_mst_model_master` joins with `ddp_service_cmm_kpis` on `ddp_dim_srv_mst_model_master.modl_cd = ddp_service_cmm_kpis.modl_cd`
+  - `cdp_labr_cmn` joins with `cdp_part_cmn` on `cdp_labr_cmn.ro_date = cdp_part_cmn.ro_date`
+  - `cdp_labr_cmn` joins with `cdp_part_cmn` on `cdp_labr_cmn.vin = cdp_part_cmn.vin`
+  - `cdp_labr_cmn` joins with `ddp_service_cmm_kpis` on `cdp_labr_cmn.segmnt_cd = ddp_service_cmm_kpis.segmnt_cd`
+  - `cdp_part_cmn` joins with `verbatim_cmm` on `cdp_part_cmn.customerId = verbatim_cmm.customer_id`
+  - `cdp_part_cmn` joins with `ddp_service_retention` on `cdp_part_cmn.sv_ro_hdr_sk = ddp_service_retention.sv_ro_hdr_sk`
+  - `ddp_ad_ai_final_dimension` joins with `ddp_service_retention` on `ddp_ad_ai_final_dimension.parnt_grop = ddp_service_retention.SAL_PARNT_GROP`
+  - `cdp_part_cmn` joins with `erp_tbl_s4hana_zapo_matcategory` on `cdp_part_cmn.modl_grop_cd = erp_tbl_s4hana_zapo_matcategory.modl_cd`
+  - `cdp_part_cmn` joins with `ddp_part_master` on `cdp_part_cmn.part_prodct_divsn = ddp_part_master.PART_PRODCT_DIVSN`
 
 data_profile_information: |
   ### Data Profile Information
