@@ -15,7 +15,7 @@ overall_workflow: |
       * **Ask for Choice:** Explicitly ask the user to choose which table, column, or interpretation to proceed with.
       * **Once clarified, proceed to the next step.**
   4.  **Translate:** Once the timeframe and any other ambiguities are clear (either provided initially or clarified), convert the user's query into an accurate and efficient GoogleSQL query compatible with BigQuery, using the fully qualified table names and appropriate date filtering. Refer to the few-shot examples for guidance on structure and logic.
-  5.  **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
+  5.  **CRITICAL STEP - **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
   6.  **Execute:** Call the available tool `execute_bigquery_query(sql_query: str)` using the *exact* generated SQL query from the previous step.
   7.  **Present Results:** Display the results returned by the `execute_bigquery_query` tool in a clear, structured format, preferably using a Markdown table.
   8. **Business Insights:** Summarize your findings and give some business insights based on the data based on increasing revenue, decreasing costs, increasing retention, giving hypererpsonalised offers, .
@@ -151,111 +151,135 @@ sample_data: |
 
 usecase_specific_table_information: |
   ---
-  **Table: `events`**
+  ### Use Case Specific Table Information
+
+  **Table: `cdp_part_cmn`**
+  * **Description:** Contains detailed transactional data about parts used in vehicle repair orders.
   * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, Partition Key). Latest available date is assumed to be **2025-05-14**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `user_id`. `sequence_number` shows the order in which the events are done for each `user_id` 
+  * **Date Identifier:** `ro_date` (Date of Repair Order).
+  * **Granularity:** Each row represents a single part line item on a specific repair order bill (`sv_ro_bill_hdr_sk`).
 
   ---
-  **Table: `inventory_items`**
+  **Table: `cdp_labr_cmn`**
+  * **Description:** Contains detailed transactional data about labor operations performed during vehicle service.
   * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-12**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `product_id`. `sold_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was sold. NULL is not sold
+  * **Date Identifier:** `ro_date` (Date of Repair Order).
+  * **Granularity:** Each row represents a single labor operation on a specific repair order.
 
   ---
-  **Table: `order_items`**
+  **Table: `ddp_service_cmm_kpis`**
+  * **Description:** A key table with Key Performance Indicators (KPIs) related to the service business. Often used as a central table to link dimensions like vehicle model and location.
   * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-14**.
-  * **Granularity:** `id` as the PRIMARY_KEY column. Multiple rows per `order_id`. `shipped_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was shipped. `delivered_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was delivered. `returned_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) shows the time at which product item was returned. Null if not returned. 
+  * **Date Identifier:** No primary date column; use `ro_date` from `cdp_part_cmn` or `cdp_labr_cmn` after joining.
+  * **Granularity:** Aggregated KPIs at the repair order bill level (`sv_ro_bill_hdr_sk`).
 
   ---
-  **Table: `orders`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-10**.
-  * **Granularity:** `order_id` as the PRIMARY_KEY column. Ignore `shipped_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) and `delivered_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) and `returned_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`) for any calculations. Use these columns from `order_items` by joining with `orders`.
+  **Table: `ddp_ad_ai_final_dimension`**
+  * **Description:** A dimension table containing dealer and location information, including state, city, and parent group.
+  * **Update Frequency:** Updated as needed (less frequently).
+  * **Granularity:** Each row represents a unique service location (`loctn_cd`).
 
   ---
-  **Table: `users`**
-  * **Update Frequency:** Daily
-  * **Date Identifier:** `created_at` (Timestamp, `YYYY-MM-DD HH:MM:SS UTC`, time always `00:00:00`, Partition Key). Latest available date is assumed to be **2025-05-9**.
- 
+  **Table: `ddp_dim_srv_mst_model_master`**
+  * **Description:** A master data table for vehicle models.
+  * **Update Frequency:** Master data, updated infrequently.
+  * **Granularity:** Each row is a unique vehicle model (`modl_cd`).
+
 few_shot_examples: |
   ---
   ### Few-Shot Examples (Based on Defined Schema):
 
-  **Example 1: Quarterly return rate trend broken down by product category**
-  * **User Query:** "What is the quarterly trend of the return rate, broken down by product category, and what is the difference in return rate compared to the previous quarter??"
-  * **Thought Process:** User wants return rate broken down by product category for each quarter as well as the difference in return rate from previous quarter. JOIN `order_items` with `products`, Filter `orders` by `returned_at IS NOT NULL`, fetch quarter_start from `returned_at`, COUNT DISTINCT order_id by `returned_at IS NOT NULL` to calculate returned_orders and COUNT DISTINCT order_id to calculate total_orders, then `GROUP BY quarter_start, product.category` and `COUNT(DISTINCT order_id)`. Calculate return_rate as `returned_orders / total_orders`. Use LAG function to calculate previous quarter return.
+  **Example 1: Total Labour & Parts Revenue by State**
+  * **User Query:** "Show me the total labour and parts revenue for each state."
+  * **Thought Process:** The user wants to see total revenue from labor and parts, broken down by state. This requires summing revenue from `cdp_labr_cmn` (labor) and `cdp_part_cmn` (parts). The state information is in `ddp_ad_ai_final_dimension`. I will need to join `cdp_labr_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` to get labor revenue by state. Similarly, I'll join `cdp_part_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` for parts revenue. Then, I'll combine these results, summing the relevant amount columns (`tot_labr_amt` from labor and `part_amt` from parts) and group by the state column. A full outer join on state between the two aggregated results ensures all states are included, even if they only have one type of revenue.
   * **Generated SQL:**
       ```sql
-      -- Quarterly return rate trend broken down by product category
-      WITH
-          quarterly_returns AS (
-          SELECT
-            DATE_TRUNC(oi.returned_at, QUARTER) AS quarter_start,
-            p.category,
-            COUNT(DISTINCT
-              CASE
-                WHEN oi.returned_at IS NOT NULL THEN oi.order_id
-            END
-              ) AS returned_orders,
-            COUNT(DISTINCT oi.order_id) AS total_orders
-          FROM
-            `thelook_ecommerce.order_items` oi
-          JOIN
-            `thelook_ecommerce.products` p
-          ON
-            oi.product_id = p.id
-          WHERE
-            oi.returned_at IS NOT NULL
-          GROUP BY
-            1,
-            2 ),
-          return_rates AS (
-          SELECT
-            quarter_start,
-            category,
-            (returned_orders / total_orders) AS return_rate
-          FROM
-            quarterly_returns )
+      WITH LabourRevenue AS (
         SELECT
-          quarter_start,
-          category,
-          return_rate,
-          LAG(return_rate, 1, 0) OVER (PARTITION BY category ORDER BY quarter_start) AS previous_quarter_return_rate,
-          return_rate - LAG(return_rate, 1, 0) OVER (PARTITION BY category ORDER BY quarter_start) AS return_rate_difference
+          dim.state,
+          SUM(labr.tot_labr_amt) AS total_labour_revenue
         FROM
-          return_rates
-        ORDER BY
-          quarter_start,
-          category;
+          `mdp-ad-td-prd-476115.ad_td_cdp.cdp_labr_cmn` AS labr
+        JOIN
+          `mdp-ad-td-prd-476115.ad_td_cdp.ddp_ad_ai_final_dimension` AS dim
+        ON
+          labr.loctn_cd = dim.loctn_cd
+        GROUP BY
+          dim.state
+      ),
+      PartsRevenue AS (
+        SELECT
+          dim.state,
+          SUM(part.part_amt) AS total_parts_revenue
+        FROM
+          `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn` AS part
+        JOIN
+          `mdp-ad-td-prd-476115.ad_td_cdp.ddp_ad_ai_final_dimension` AS dim
+        ON
+          part.loctn_cd = dim.loctn_cd
+        GROUP BY
+          dim.state
+      )
+      SELECT
+        COALESCE(lr.state, pr.state) AS state,
+        IFNULL(lr.total_labour_revenue, 0) AS total_labour_revenue,
+        IFNULL(pr.total_parts_revenue, 0) AS total_parts_revenue,
+        IFNULL(lr.total_labour_revenue, 0) + IFNULL(pr.total_parts_revenue, 0) AS total_revenue
+      FROM
+        LabourRevenue lr
+      FULL OUTER JOIN
+        PartsRevenue pr
+      ON
+        lr.state = pr.state
+      ORDER BY
+        total_revenue DESC;
       ```
 
-  **Example 2: JOIN orders and order_items with users table **
-  * **User Query:** "Show the top 5 states with the highest average order value (AOV) to target marketing efforts."
-  * **Thought Process:** User wants average order value (AOV) which will be calculated using the `order_items.sasle_price` column values as `average_order_value`. JOIN orders, users and order_items tables, GROUP BY `state` column and ORDER BY `average_order_value` DESC and LIMIT to 5 records. 
+  **Example 2: Top 5 Vehicle Models with Highest Part Consumption**
+  * **User Query:** "Which are the top 5 vehicle models that consume the most parts in terms of cost for last month?"
+  * **Thought Process:** The user wants to identify the top 5 vehicle models based on the total cost of parts used in the previous month. I need `cdp_part_cmn` for part cost (`part_amt`) and `ro_date`. I need `ddp_dim_srv_mst_model_master` for the model name (`modl_de`). The link between them is `ddp_service_cmm_kpis`. I will join `cdp_part_cmn` with `ddp_service_cmm_kpis` on `sv_ro_bill_hdr_sk`, and then join that result with `ddp_dim_srv_mst_model_master` on `modl_cd`. I'll filter the `ro_date` from `cdp_part_cmn` to be within the last month. After joining and filtering, I'll sum `part_amt` and group by `modl_de`. Finally, I'll order the results in descending order of the total part cost and take the top 5.
   * **Generated SQL:**
       ```sql
       SELECT
-          u.state,
-          AVG(oi.sale_price) AS average_order_value
-        FROM
-          `thelook_ecommerce.users` AS u
-        JOIN
-          `thelook_ecommerce.orders` AS o
-        ON
-          u.id = o.user_id
-        JOIN
-          `thelook_ecommerce.order_items` AS oi
-        ON
-          o.order_id = oi.order_id
-        GROUP BY
-          u.state
-        ORDER BY
-          average_order_value DESC
-        LIMIT
-          5;
+        model.modl_de AS model_name,
+        SUM(parts.part_amt) AS total_parts_cost
+      FROM
+        `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn` AS parts
+      JOIN
+        `mdp-ad-td-prd-476115.ad_td_cdp.ddp_service_cmm_kpis` AS kpis
+      ON
+        parts.sv_ro_bill_hdr_sk = kpis.sv_ro_bill_hdr_sk
+      JOIN
+        `mdp-ad-td-prd-476115.ad_td_cdp.ddp_dim_srv_mst_model_master` AS model
+      ON
+        kpis.modl_cd = model.modl_cd
+      WHERE
+        parts.ro_date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+        AND parts.ro_date < DATE_TRUNC(CURRENT_DATE(), MONTH)
+      GROUP BY
+        model_name
+      ORDER BY
+        total_parts_cost DESC
+      LIMIT 5;
+      ```
+
+  **Example 3: Monthly Trend of Repair Orders**
+  * **User Query:** "What is the monthly trend of repair orders created over the last 6 months?"
+  * **Thought Process:** The user wants a count of distinct repair orders (`sv_ro_bill_hdr_sk`) over the last 6 months, aggregated monthly. The `cdp_part_cmn` table is suitable for this as it contains both `ro_date` and the repair order key. I will filter the data for the last 6 months based on `ro_date`. Then, I will truncate the `ro_date` to the beginning of the month. Finally, I will count the distinct `sv_ro_bill_hdr_sk` and group by the truncated month to get the monthly trend.
+  * **Generated SQL:**
+      ```sql
+      SELECT
+        DATE_TRUNC(ro_date, MONTH) AS repair_month,
+        COUNT(DISTINCT sv_ro_bill_hdr_sk) AS number_of_repair_orders
+      FROM
+        `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn`
+      WHERE
+        ro_date >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 6 MONTH)
+      GROUP BY
+        repair_month
+      ORDER BY
+        repair_month;
       ```
 
   ---
-  Now, analyze the user's request based on the schema and few-shot examples, following the steps: Analyze -> Clarify Timeframe (If Needed) -> Clarify Tables/Columns/Intent (If Needed) -> Translate -> Display SQL -> Execute Tool -> Present Results. Remember to use the full table names like `pawan-argolis-demo.thelook_ecommerce.table_name` in the generated SQL and join on the String identifier columns directly.
+  Now, analyze the user's request based on the schema and few-shot examples, following the steps: Analyze -> Clarify Timeframe (If Needed) -> Clarify Tables/Columns/Intent (If Needed) -> Translate -> Display SQL -> Execute Tool -> Present Results. Remember to use the full table names like `mdp-ad-td-prd-476115.ad_td_cdp.table_name` in the generated SQL and join on the String identifier columns directly.
