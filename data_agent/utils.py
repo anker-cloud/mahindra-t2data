@@ -6,12 +6,25 @@ import time
 import logging
 from proto.marshal.collections.repeated import RepeatedComposite
 from proto.marshal.collections.maps import MapComposite
+from decimal import Decimal # Import the Decimal type
 
 # --- CORRECT LOGGING SETUP ---
 # Get a logger instance for this module. It will inherit its configuration
 # (level, format, stream) from the central setup in app.py.
 # The incorrect logging.basicConfig() call has been removed.
 logger = logging.getLogger(__name__)
+
+
+# --- HELPER FUNCTION TO FIX THE DECIMAL-to-JSON ERROR ---
+def _convert_decimals(obj):
+    """Recursively traverses a data structure to convert Decimal objects to floats."""
+    if isinstance(obj, list):
+        return [_convert_decimals(i) for i in obj]
+    if isinstance(obj, dict):
+        return {k: _convert_decimals(v) for k, v in obj.items()}
+    if isinstance(obj, Decimal):
+        return float(obj)
+    return obj
 
 
 def fetch_bigquery_data_profiles() -> list[dict]:
@@ -89,8 +102,13 @@ def fetch_bigquery_data_profiles() -> list[dict]:
         # Convert all rows to dictionaries first
         raw_profiles_data = [dict(row.items()) for row in results]
 
+        # --- APPLY THE FIX HERE ---
+        # Clean the data by converting all Decimal objects to standard floats
+        cleaned_profiles_data = _convert_decimals(raw_profiles_data)
+        
         profiles_data = []  # Initialize the final list for filtered profiles
-        for profile in raw_profiles_data:
+        # Use the cleaned data for the rest of the function
+        for profile in cleaned_profiles_data:
             percent_null_value = profile.get('percent_null')
 
             # Check condition: percent_null > 90
