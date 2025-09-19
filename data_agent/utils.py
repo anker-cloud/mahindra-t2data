@@ -102,7 +102,7 @@ def fetch_bigquery_data_profiles() -> list[dict]:
         # Convert all rows to dictionaries first
         raw_profiles_data = [dict(row.items()) for row in results]
 
-        # --- APPLY THE FIX HERE ---
+        # --- FIX #1 APPLIED HERE ---
         # Clean the data by converting all Decimal objects to standard floats
         cleaned_profiles_data = _convert_decimals(raw_profiles_data)
         
@@ -179,7 +179,11 @@ def fetch_sample_data_for_tables(num_rows: int = 3) -> list[dict]:
             logger.info(f"Fetching sample data for table: {full_table_name}")
             table_reference = TableReference.from_string(full_table_name, default_project=project_id)
             rows_iterator = client.list_rows(table_reference, max_results=num_rows)
-            table_sample_rows = [dict(row.items()) for row in rows_iterator]
+            table_sample_rows_raw = [dict(row.items()) for row in rows_iterator]
+
+            # --- FIX #2 APPLIED HERE ---
+            # Clean the sample data by converting all Decimal objects to floats
+            table_sample_rows = _convert_decimals(table_sample_rows_raw)
 
             if table_sample_rows:
                 sample_data_results.append({
