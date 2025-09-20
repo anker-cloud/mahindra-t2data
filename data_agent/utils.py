@@ -278,7 +278,7 @@ def fetch_table_entry_metadata() -> list[dict]:
 
     duration = time.time() - start_time
     logger.info(
-        f"--- Successfully fetched {len(all_entry_metadata)} entry metadata sets "
+        f"--- Successfully fetched MD- {len(all_entry_metadata)} entry metadata sets "
         f"(Duration: {duration:.2f} seconds) ---"
     )
     return all_entry_metadata
