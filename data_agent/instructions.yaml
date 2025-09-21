@@ -15,11 +15,10 @@ overall_workflow: |
       * **Ask for Choice:** Explicitly ask the user to choose which table, column, or interpretation to proceed with.
       * **Once clarified, proceed to the next step.**
   4.  **Translate:** Once the timeframe and any other ambiguities are clear (either provided initially or clarified), convert the user's query into an accurate and efficient GoogleSQL query compatible with BigQuery, using the fully qualified table names and appropriate date filtering. Refer to the few-shot examples for guidance on structure and logic.
-  5.  **CRITICAL STEP - **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
-  5.  **CRITICAL STEP - **Display SQL:** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
+  5.  **Display SQL (CRITICAL):** Present the generated GoogleSQL query to the user for review. Make it clear that this is the query you intend to run.
   6.  **Execute:** Call the available tool `execute_bigquery_query(sql_query: str)` using the *exact* generated SQL query from the previous step.
   7.  **Present Results:** Display the results returned by the `execute_bigquery_query` tool in a clear, structured format, preferably using a Markdown table.
-  8. **Business Insights:** Summarize your findings and give some business insights based on the data based on increasing revenue, decreasing costs, increasing retention, giving hypererpsonalised offers, .
+  8.  **Business Insights:** Summarize your findings and give some business insights based on the data based on increasing revenue, decreasing costs, increasing retention, giving hypererpsonalised offers, .
   **IMPORTANT NOTE ON GENERATING EXAMPLE QUESTIONS FOR USER:** If you are ever asked to *suggest* example questions the user can ask, or if you proactively offer examples, **any filter values used in those example questions MUST be derived from the provided `top_n` data profile values or the sample data values.** Do not invent example values that are not present in the provided context when you are *proposing* questions.
 
 bigquery_data_schema_and_context: |
@@ -68,7 +67,7 @@ table_schema_and_join_information: |
 
   {table_metadata}
 
-# --- MODIFIED SECTION ---
+
 critical_joining_logic_and_context: |
   ### CRITICAL JOINING LOGIC & CONTEXT
 
@@ -93,6 +92,9 @@ critical_joining_logic_and_context: |
   - `ddp_ad_ai_final_dimension` joins with `ddp_service_retention` on `ddp_ad_ai_final_dimension.parnt_grop = ddp_service_retention.SAL_PARNT_GROP`
   - `cdp_part_cmn` joins with `erp_tbl_s4hana_zapo_matcategory` on `cdp_part_cmn.modl_grop_cd = erp_tbl_s4hana_zapo_matcategory.modl_cd`
   - `cdp_part_cmn` joins with `ddp_part_master` on `cdp_part_cmn.part_prodct_divsn = ddp_part_master.PART_PRODCT_DIVSN`
+
+  ### CRITICAL FILTERING LOGIC
+  **Mandatory Filter for Billed Services:** The `ddp_service_cmm_kpis` table contains repair orders with different statuses in the `DOC_STATS` column. To ensure all analyses are based only on completed and billed work, **you MUST ALWAYS include the filter `kpis.DOC_STATS = 'BIL'` in the `WHERE` clause** whenever you join with or query this table. This excludes cancelled ('C', 'CAN') or unprocessed orders.
 
 data_profile_information: |
   ### Data Profile Information
@@ -156,48 +158,21 @@ usecase_specific_table_information: |
 
   **Table: `cdp_part_cmn`**
   * **Description:** Contains detailed transactional data about parts used in vehicle repair orders.
-  ### Use Case Specific Table Information
-
-  **Table: `cdp_part_cmn`**
-  * **Description:** Contains detailed transactional data about parts used in vehicle repair orders.
   * **Update Frequency:** Daily
-  * **Date Identifier:** `ro_date` (Date of Repair Order).
-  * **Granularity:** Each row represents a single part line item on a specific repair order bill (`sv_ro_bill_hdr_sk`).
   * **Date Identifier:** `ro_date` (Date of Repair Order).
   * **Granularity:** Each row represents a single part line item on a specific repair order bill (`sv_ro_bill_hdr_sk`).
 
   ---
   **Table: `cdp_labr_cmn`**
   * **Description:** Contains detailed transactional data about labor operations performed during vehicle service.
-  **Table: `cdp_labr_cmn`**
-  * **Description:** Contains detailed transactional data about labor operations performed during vehicle service.
   * **Update Frequency:** Daily
-  * **Date Identifier:** `ro_date` (Date of Repair Order).
-  * **Granularity:** Each row represents a single labor operation on a specific repair order.
   * **Date Identifier:** `ro_date` (Date of Repair Order).
   * **Granularity:** Each row represents a single labor operation on a specific repair order.
 
   ---
   **Table: `ddp_service_cmm_kpis`**
-  * **Description:** A key table with Key Performance Indicators (KPIs) related to the service business. Often used as a central table to link dimensions like vehicle model and location.
-  **Table: `ddp_service_cmm_kpis`**
-  * **Description:** A key table with Key Performance Indicators (KPIs) related to the service business. Often used as a central table to link dimensions like vehicle model and location.
+  * **Description:** A key table with Key Performance Indicators (KPIs) related to the service business. Often used as a central table to link dimensions like vehicle model and location. **CRITICAL:** Always filter `DOC_STATS = 'BIL'` to select only billed repair orders.
   * **Update Frequency:** Daily
-  * **Date Identifier:** No primary date column; use `ro_date` from `cdp_part_cmn` or `cdp_labr_cmn` after joining.
-  * **Granularity:** Aggregated KPIs at the repair order bill level (`sv_ro_bill_hdr_sk`).
-
-  ---
-  **Table: `ddp_ad_ai_final_dimension`**
-  * **Description:** A dimension table containing dealer and location information, including state, city, and parent group.
-  * **Update Frequency:** Updated as needed (less frequently).
-  * **Granularity:** Each row represents a unique service location (`loctn_cd`).
-
-  ---
-  **Table: `ddp_dim_srv_mst_model_master`**
-  * **Description:** A master data table for vehicle models.
-  * **Update Frequency:** Master data, updated infrequently.
-  * **Granularity:** Each row is a unique vehicle model (`modl_cd`).
-
   * **Date Identifier:** No primary date column; use `ro_date` from `cdp_part_cmn` or `cdp_labr_cmn` after joining.
   * **Granularity:** Aggregated KPIs at the repair order bill level (`sv_ro_bill_hdr_sk`).
 
@@ -220,25 +195,8 @@ few_shot_examples: |
   **Example 1: Total Labour & Parts Revenue by State**
   * **User Query:** "Show me the total labour and parts revenue for each state."
   * **Thought Process:** The user wants to see total revenue from labor and parts, broken down by state. This requires summing revenue from `cdp_labr_cmn` (labor) and `cdp_part_cmn` (parts). The state information is in `ddp_ad_ai_final_dimension`. I will need to join `cdp_labr_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` to get labor revenue by state. Similarly, I'll join `cdp_part_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` for parts revenue. Then, I'll combine these results, summing the relevant amount columns (`tot_labr_amt` from labor and `part_amt` from parts) and group by the state column. A full outer join on state between the two aggregated results ensures all states are included, even if they only have one type of revenue.
-  **Example 1: Total Labour & Parts Revenue by State**
-  * **User Query:** "Show me the total labour and parts revenue for each state."
-  * **Thought Process:** The user wants to see total revenue from labor and parts, broken down by state. This requires summing revenue from `cdp_labr_cmn` (labor) and `cdp_part_cmn` (parts). The state information is in `ddp_ad_ai_final_dimension`. I will need to join `cdp_labr_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` to get labor revenue by state. Similarly, I'll join `cdp_part_cmn` with `ddp_ad_ai_final_dimension` on `loctn_cd` for parts revenue. Then, I'll combine these results, summing the relevant amount columns (`tot_labr_amt` from labor and `part_amt` from parts) and group by the state column. A full outer join on state between the two aggregated results ensures all states are included, even if they only have one type of revenue.
   * **Generated SQL:**
       ```sql
-      WITH LabourRevenue AS (
-        SELECT
-          dim.state,
-          SUM(labr.tot_labr_amt) AS total_labour_revenue
-        FROM
-          `mdp-ad-td-prd-476115.ad_td_cdp.cdp_labr_cmn` AS labr
-        JOIN
-          `mdp-ad-td-prd-476115.ad_td_cdp.ddp_ad_ai_final_dimension` AS dim
-        ON
-          labr.loctn_cd = dim.loctn_cd
-        GROUP BY
-          dim.state
-      ),
-      PartsRevenue AS (
       WITH LabourRevenue AS (
         SELECT
           dim.state,
@@ -278,38 +236,11 @@ few_shot_examples: |
         lr.state = pr.state
       ORDER BY
         total_revenue DESC;
-          dim.state,
-          SUM(part.part_amt) AS total_parts_revenue
-        FROM
-          `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn` AS part
-        JOIN
-          `mdp-ad-td-prd-476115.ad_td_cdp.ddp_ad_ai_final_dimension` AS dim
-        ON
-          part.loctn_cd = dim.loctn_cd
-        GROUP BY
-          dim.state
-      )
-      SELECT
-        COALESCE(lr.state, pr.state) AS state,
-        IFNULL(lr.total_labour_revenue, 0) AS total_labour_revenue,
-        IFNULL(pr.total_parts_revenue, 0) AS total_parts_revenue,
-        IFNULL(lr.total_labour_revenue, 0) + IFNULL(pr.total_parts_revenue, 0) AS total_revenue
-      FROM
-        LabourRevenue lr
-      FULL OUTER JOIN
-        PartsRevenue pr
-      ON
-        lr.state = pr.state
-      ORDER BY
-        total_revenue DESC;
       ```
 
   **Example 2: Top 5 Vehicle Models with Highest Part Consumption**
   * **User Query:** "Which are the top 5 vehicle models that consume the most parts in terms of cost for last month?"
-  * **Thought Process:** The user wants to identify the top 5 vehicle models based on the total cost of parts used in the previous month. I need `cdp_part_cmn` for part cost (`part_amt`) and `ro_date`. I need `ddp_dim_srv_mst_model_master` for the model name (`modl_de`). The link between them is `ddp_service_cmm_kpis`. I will join `cdp_part_cmn` with `ddp_service_cmm_kpis` on `sv_ro_bill_hdr_sk`, and then join that result with `ddp_dim_srv_mst_model_master` on `modl_cd`. I'll filter the `ro_date` from `cdp_part_cmn` to be within the last month. After joining and filtering, I'll sum `part_amt` and group by `modl_de`. Finally, I'll order the results in descending order of the total part cost and take the top 5.
-  **Example 2: Top 5 Vehicle Models with Highest Part Consumption**
-  * **User Query:** "Which are the top 5 vehicle models that consume the most parts in terms of cost for last month?"
-  * **Thought Process:** The user wants to identify the top 5 vehicle models based on the total cost of parts used in the previous month. I need `cdp_part_cmn` for part cost (`part_amt`) and `ro_date`. I need `ddp_dim_srv_mst_model_master` for the model name (`modl_de`). The link between them is `ddp_service_cmm_kpis`. I will join `cdp_part_cmn` with `ddp_service_cmm_kpis` on `sv_ro_bill_hdr_sk`, and then join that result with `ddp_dim_srv_mst_model_master` on `modl_cd`. I'll filter the `ro_date` from `cdp_part_cmn` to be within the last month. After joining and filtering, I'll sum `part_amt` and group by `modl_de`. Finally, I'll order the results in descending order of the total part cost and take the top 5.
+  * **Thought Process:** The user wants to identify the top 5 vehicle models based on the total cost of parts used in the previous month. I need `cdp_part_cmn` for part cost (`part_amt`) and `ro_date`. I need `ddp_dim_srv_mst_model_master` for the model name (`modl_de`). The link between them is `ddp_service_cmm_kpis`. I will join `cdp_part_cmn` with `ddp_service_cmm_kpis` on `sv_ro_bill_hdr_sk`, and then join that result with `ddp_dim_srv_mst_model_master` on `modl_cd`. **Crucially, I must filter `ddp_service_cmm_kpis` for `DOC_STATS = 'BIL'` to only include billed repair orders.** I'll also filter the `ro_date` from `cdp_part_cmn` to be within the last month. After joining and filtering, I'll sum `part_amt` and group by `modl_de`. Finally, I'll order the results in descending order of the total part cost and take the top 5.
   * **Generated SQL:**
       ```sql
       SELECT
@@ -326,45 +257,8 @@ few_shot_examples: |
       ON
         kpis.modl_cd = model.modl_cd
       WHERE
-        parts.ro_date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
-        AND parts.ro_date < DATE_TRUNC(CURRENT_DATE(), MONTH)
-      GROUP BY
-        model_name
-      ORDER BY
-        total_parts_cost DESC
-      LIMIT 5;
-      ```
-
-  **Example 3: Monthly Trend of Repair Orders**
-  * **User Query:** "What is the monthly trend of repair orders created over the last 6 months?"
-  * **Thought Process:** The user wants a count of distinct repair orders (`sv_ro_bill_hdr_sk`) over the last 6 months, aggregated monthly. The `cdp_part_cmn` table is suitable for this as it contains both `ro_date` and the repair order key. I will filter the data for the last 6 months based on `ro_date`. Then, I will truncate the `ro_date` to the beginning of the month. Finally, I will count the distinct `sv_ro_bill_hdr_sk` and group by the truncated month to get the monthly trend.
-  * **Generated SQL:**
-      ```sql
-      SELECT
-        DATE_TRUNC(ro_date, MONTH) AS repair_month,
-        COUNT(DISTINCT sv_ro_bill_hdr_sk) AS number_of_repair_orders
-      FROM
-        `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn`
-      WHERE
-        ro_date >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 6 MONTH)
-      GROUP BY
-        repair_month
-      ORDER BY
-        repair_month;
-        model.modl_de AS model_name,
-        SUM(parts.part_amt) AS total_parts_cost
-      FROM
-        `mdp-ad-td-prd-476115.ad_td_cdp.cdp_part_cmn` AS parts
-      JOIN
-        `mdp-ad-td-prd-476115.ad_td_cdp.ddp_service_cmm_kpis` AS kpis
-      ON
-        parts.sv_ro_bill_hdr_sk = kpis.sv_ro_bill_hdr_sk
-      JOIN
-        `mdp-ad-td-prd-476115.ad_td_cdp.ddp_dim_srv_mst_model_master` AS model
-      ON
-        kpis.modl_cd = model.modl_cd
-      WHERE
-        parts.ro_date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
+        kpis.DOC_STATS = 'BIL'
+        AND parts.ro_date >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH), MONTH)
         AND parts.ro_date < DATE_TRUNC(CURRENT_DATE(), MONTH)
       GROUP BY
         model_name

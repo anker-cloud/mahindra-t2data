@@ -10,57 +10,69 @@ import SolutionArchitecture from './components/SolutionArchitecture/SolutionArch
 import HorizontalNav from './components/HorizontalNav/HorizontalNav';
 
 function App() {
-  const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
-  const [isLoading, setIsLoading] = useState(false);
+    // --- STATE MANAGEMENT ---
+    // Now we store both username and sessionId
+    const [username, setUsername] = useState(() => localStorage.getItem('username') || '');
+    const [sessionId, setSessionId] = useState(() => localStorage.getItem('sessionId') || '');
 
-  useEffect(() => {
-    if (username) {
-      localStorage.setItem('username', username);
-    } else {
-      localStorage.removeItem('username');
+    useEffect(() => {
+        // Persist both username and sessionId to localStorage
+        if (username && sessionId) {
+            localStorage.setItem('username', username);
+            localStorage.setItem('sessionId', sessionId);
+        } else {
+            localStorage.removeItem('username');
+            localStorage.removeItem('sessionId');
+        }
+    }, [username, sessionId]);
+
+    // --- LOGIN/LOGOUT HANDLERS ---
+    const handleLogin = (loginData) => {
+        // This now receives both username and sessionId from LoginPage
+        setUsername(loginData.username);
+        setSessionId(loginData.sessionId);
+        console.log('Logged in as:', loginData.username, 'with session:', loginData.sessionId);
+    };
+
+    const handleLogout = () => {
+        // Clear both username and sessionId on logout
+        setUsername('');
+        setSessionId('');
+        console.log('Logged out');
+    };
+
+    // --- RENDER LOGIC ---
+    // If we don't have a username/session, show the LoginPage
+    if (!username || !sessionId) {
+        return <LoginPage onLogin={handleLogin} />;
     }
-  }, [username]);
 
-  const handleLogin = (userData) => {
-    setIsLoading(true);
-    setUsername(userData.username);
-    console.log('Logged in as:', userData.username, 'with role:', userData.role);
-    setIsLoading(false);
-  };
-
-  const handleLogout = () => {
-    setUsername('');
-    console.log('Logged out');
-  };
-
-  if (!username) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
-  return (
-    <Router>
-      <div className="App-container">
-        <HorizontalNav username={username} onLogout={handleLogout} />
-        <div className="App-content-area">
-          <VerticalNav />
-          <main className="App-main-content">
-            <Routes>
-              <Route
-                path="/"
-                element={<ChatInterface username={username} />}
-              />
-              <Route
-                path="/chat"
-                element={<ChatInterface username={username} />}
-              />
-              <Route path="/data-preview" element={<DataPreview />} />
-              <Route path="/solution-architecture" element={<SolutionArchitecture />} />
-            </Routes>
-          </main>
-        </div>
-      </div>
-    </Router>
-  );
+    // If we are logged in, show the main application dashboard
+    return (
+        <Router>
+            <div className="App-container">
+                <HorizontalNav username={username} onLogout={handleLogout} />
+                <div className="App-content-area">
+                    <VerticalNav />
+                    <main className="App-main-content">
+                        <Routes>
+                            <Route
+                                path="/"
+                                // Pass both username and sessionId to the ChatInterface
+                                element={<ChatInterface username={username} sessionId={sessionId} />}
+                            />
+                            <Route
+                                path="/chat"
+                                element={<ChatInterface username={username} sessionId={sessionId} />}
+                            />
+                            <Route path="/data-preview" element={<DataPreview />} />
+                            <Route path="/solution-architecture" element={<SolutionArchitecture />} />
+                        </Routes>
+                    </main>
+                </div>
+            </div>
+        </Router>
+    );
 }
 
 export default App;

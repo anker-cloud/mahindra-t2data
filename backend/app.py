@@ -1,14 +1,15 @@
 import os
 import logging
-from flask import Flask, send_from_directory, abort, jsonify, request, current_app
-from dotenv import load_dotenv
+import sys
 import functools
 import time
-import sys
 import sqlalchemy
+from flask import Flask, send_from_directory, abort, jsonify, request, current_app
+from dotenv import load_dotenv
+import uuid
 
-# --- FIX 1: Configure Logging to DEBUG Level ---
-# This is set to DEBUG to ensure all detailed logs are captured in GCP.
+# --- Configure Logging to DEBUG Level ---
+# This is set to DEBUG to ensure all detailed logs are captured.
 logging.basicConfig(
     stream=sys.stdout,
     level=logging.DEBUG,
@@ -17,7 +18,7 @@ logging.basicConfig(
 )
 
 # --- Import other modules after logging is set up ---
-from backend.utils import get_table_description, get_table_ddl_strings, get_total_rows, get_total_column_count
+from backend.utils import get_table_description, get_table_ddl_strings, get_total_rows, get_total_column_count, fetch_sample_data_for_single_table
 try:
     from data_agent.agent import root_agent
     from google.adk.runners import Runner
@@ -26,7 +27,6 @@ try:
     from google.genai import types as genai_types
 except ImportError as e:
     logging.critical(f"A critical module could not be imported. The app cannot start. Error: {e}")
-    # Set placeholders to prevent further errors
     root_agent = Runner = DatabaseSessionService = InMemorySessionService = genai_types = None
 
 # Load environment variables from a .env file if it exists
@@ -35,13 +35,28 @@ load_dotenv(dotenv_path)
 
 def create_app():
     """Application Factory Function"""
-    app = Flask(__name__, static_folder='../frontend/build/static', static_url_path='/static')
+    app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
 
-    # --- FIX 2: Move All Initialization Logic Inside the Factory ---
+    # --- RESTORED: Caching Decorator ---
+    def cache(timeout=3600):
+        def decorator(f):
+            @functools.wraps(f)
+            def wrapper(*args, **kwargs):
+                cache_key = request.url
+                if cache_key in wrapper.cache:
+                    result, timestamp = wrapper.cache[cache_key]
+                    if (time.time() - timestamp) < timeout:
+                        logging.debug(f"Returning cached result for {cache_key}")
+                        return result
+                result = f(*args, **kwargs)
+                wrapper.cache[cache_key] = (result, time.time())
+                return result
+            wrapper.cache = {}
+            return wrapper
+        return decorator
+
+    # --- Initialization Logic Inside the Factory ---
     APP_NAME = "data_agent_chatbot"
-    USER_ID = "user_1" # Default user_id
-
-    # Initialize ADK services and Runner within the app context
     if all([Runner, InMemorySessionService, root_agent]):
         try:
             db_url = "sqlite:///./my_agent_data.db"
@@ -59,15 +74,13 @@ def create_app():
                 agent=root_agent,
                 session_service=session_service,
             )
-            # Attach the runner and other components to the app object for access in routes
             app.runner = runner
             app.session_service = session_service
             app.genai_types = genai_types
-            app.default_user_id = USER_ID
             logging.info("ADK Runner initialized successfully and attached to app.")
         except Exception as e:
             logging.critical(f"FATAL: Could not initialize ADK Runner: {e}", exc_info=True)
-            app.runner = None # Ensure runner is None if initialization fails
+            app.runner = None
     else:
         logging.critical("ADK Runner could not be initialized due to missing components.")
         app.runner = None
@@ -78,72 +91,244 @@ def create_app():
     app.config['FRONTEND_BUILD_DIR'] = frontend_build_path
 
     # --- API Routes ---
+
+    @app.route("/api/login", methods=["POST"])
+    def login():
+        """Creates a new session for a user and returns the session ID."""
+        session_service = current_app.session_service
+        runner = current_app.runner
+        if not all([session_service, runner]):
+            return jsonify({"error": "Session service not initialized."}), 500
+        
+        req_data = request.get_json()
+        user_id = req_data.get('user_id')
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
+
+        try:
+            session = session_service.create_session(app_name=runner.app_name, user_id=user_id)
+            logging.info(f"New session created for user '{user_id}' with session_id: {session.id}")
+            return jsonify({"session_id": session.id, "user_id": user_id}), 200
+        except Exception as e:
+            logging.error(f"Failed to create session for user '{user_id}': {e}", exc_info=True)
+            return jsonify({"error": "Could not create session."}), 500
+
+    @app.route("/api/logout", methods=["POST"])
+    def logout():
+        """Handles user logout."""
+        req_data = request.get_json()
+        user_id = req_data.get('user_id')
+        session_id = req_data.get('session_id')
+        logging.info(f"User '{user_id}' logged out of session '{session_id}'.")
+        return jsonify({"message": "Logout successful"}), 200
+
     @app.route("/api/chat", methods=["POST"])
     async def chat_handler():
         """Handles a chat turn with the ADK agent."""
-        # Access components from the application context
         runner = current_app.runner
         session_service = current_app.session_service
         genai_types = current_app.genai_types
-
         if not all([runner, session_service, genai_types]):
             return jsonify({"error": "Chat components not initialized on the server."}), 500
-
+        
         session_id = None
         try:
             req_data = request.get_json()
             logging.debug(f"[BACKEND] Received raw request on /api/chat: {req_data}")
-            user_id = req_data.get('user_id') or current_app.default_user_id
+            user_id = req_data.get('user_id')
             session_id = req_data.get('session_id')
             message_text = req_data.get('message', {}).get('message')
-
-            if not user_id or not message_text:
-                return jsonify({"error": "user_id and message with 'message' key are required"}), 400
-
-            if session_id:
-                session = session_service.get_session(app_name=runner.app_name, user_id=user_id, session_id=session_id)
-                if not session:
-                    return jsonify({"session_id": session_id, "messages": [], "error": "Session not found"}), 404
-            else:
-                session = session_service.create_session(app_name=runner.app_name, user_id=user_id)
-                session_id = session.id
-                logging.info(f"New session created with ID: {session_id}")
-
-            new_message_content = genai_types.Content(parts=[genai_types.Part(text=message_text)], role='user')
-            agent_responses = []
-            async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=new_message_content):
+            if not all([user_id, session_id, message_text]):
+                return jsonify({"error": "user_id, session_id, and message are required"}), 400
+            
+            final_response_parts = []
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
+                new_message=genai_types.Content(parts=[genai_types.Part(text=message_text)], role='user')
+            ):
                 logging.debug(f"[AGENT_EVENT] Received event: {event}")
+                if event.error_code == 'MALFORMED_FUNCTION_CALL':
+                    final_response_parts.append({
+                        "role": "assistant", 
+                        "content": "I'm sorry, I encountered a technical issue while processing your request. Please try rephrasing it."
+                    })
+                    break 
                 if hasattr(event, 'content') and event.content and hasattr(event.content, 'parts'):
                     for part in event.content.parts:
                         if hasattr(part, 'text') and part.text:
-                            agent_responses.append({"role": event.content.role or "model", "content": part.text})
-
-            return jsonify({"session_id": session_id, "messages": agent_responses}), 200
+                            final_response_parts.append({"role": event.content.role or "model", "content": part.text})
+            
+            return jsonify({"session_id": session_id, "messages": final_response_parts}), 200
 
         except Exception as e:
             logging.error(f"Error during chat processing: {str(e)}", exc_info=True)
             return jsonify({"session_id": session_id or "", "messages": [], "error": f"Internal server error: {str(e)}"}), 500
-    
-    # Other API routes like /api/tables, /api/table_data, etc. would go here...
 
-    # --- React Frontend Serving ---
+    @app.route("/api/tables", methods=["GET"])
+    @cache(timeout=3600)
+    def list_tables():
+        """Returns a list of tables and their aggregate stats from BigQuery."""
+        try:
+            tables = get_table_ddl_strings()
+            
+            # --- This is the restored logic that calculates the totals ---
+            num_tables = len(tables)
+            total_rows = 0
+            table_names = []
+            for table in tables:
+                table_name = table["table_name"]
+                table_names.append(table_name)
+                # This helper function calculates rows per table
+                total_rows += get_total_rows(table_name)
+
+            # This helper function calculates the total columns
+            total_columns = get_total_column_count()
+
+            return jsonify({
+                "tables": table_names,
+                "num_tables": num_tables,
+                "total_columns": total_columns,
+                "total_rows": total_rows
+            }), 200
+            # ----------------------------------------------------------------
+
+        except Exception as e:
+            logging.error(f"Error listing tables: {str(e)}", exc_info=True)
+            return jsonify({"error": f"Internal server error: {str(e)}"}), 500
+    
+
+    @app.route("/api/test_query", methods=["GET"])
+    async def test_query():
+        """
+        An unauthenticated endpoint for internal testing.
+        Takes a user_id and question, runs a stateless chat turn,
+        and returns the generated SQL, a clarification question, or an error.
+        URL - http://127.0.0.1:8080/api/test_query?user_id=internal_tester&question=What were the top 5 vehicle models by part consumption last month
+        """
+        user_id = request.args.get("user_id")
+        question = request.args.get("question")
+
+        if not all([user_id, question]):
+            return jsonify({"error": "Both 'user_id' and 'question' URL parameters are required."}), 400
+
+        runner = current_app.runner
+        genai_types = current_app.genai_types
+        session_service = current_app.session_service
+
+        if not all([runner, genai_types, session_service]):
+            return jsonify({"error": "Chat components not initialized on the server."}), 500
+
+        generated_sql = None
+        agent_error = None
+        llm_response = "" # --- NEW: Variable to capture text responses ---
+        try:
+            temp_session = session_service.create_session(app_name=runner.app_name, user_id=user_id)
+            logging.debug(f"[TEST_ENDPOINT] Created temporary session_id: {temp_session.id}")
+            
+            new_message = genai_types.Content(parts=[genai_types.Part(text=question)], role='user')
+
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=temp_session.id,
+                new_message=new_message
+            ):
+                logging.debug(f"[TEST_ENDPOINT] Received event: {event}")
+                
+                if event.error_code:
+                    agent_error = { "code": event.error_code, "message": event.error_message }
+                    break
+
+                if hasattr(event, 'content') and event.content:
+                    for part in event.content.parts:
+                        # Capture the SQL if a tool call is present
+                        if hasattr(part, 'function_call') and part.function_call and part.function_call.name == 'execute_bigquery_query':
+                           raw_sql = part.function_call.args.get('sql_query')
+                           if raw_sql:
+                               generated_sql = ' '.join(line.strip() for line in raw_sql.splitlines())
+                        
+                        # --- NEW: Always capture any text content ---
+                        if hasattr(part, 'text') and part.text:
+                            llm_response += part.text
+
+                if generated_sql or agent_error:
+                    break
+            
+            if agent_error:
+                return jsonify({ "status": "AgentError", "error": agent_error }), 400
+            
+            # --- NEW: Check if the LLM asked a question instead of generating SQL ---
+            if not generated_sql and llm_response:
+                return jsonify({
+                    "status": "ClarificationNeeded",
+                    "user_id": user_id,
+                    "question": question,
+                    "clarification_question": llm_response.strip()
+                }), 200
+
+            return jsonify({
+                "status": "Success",
+                "user_id": user_id,
+                "question": question,
+                "generated_sql": generated_sql or "No SQL was generated for this query."
+            }), 200
+
+        except Exception as e:
+            logging.error(f"Error in test_query endpoint: {e}", exc_info=True)
+            return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
+        
+    @app.route("/api/table_data", methods=["GET"])
+    @cache(timeout=3600)
+    def get_table_data():
+        """Returns sample data and a description for a specific table."""
+        table_name = request.args.get("table_name")
+        if not table_name:
+            return jsonify({"error": "Table name is required"}), 400
+        try:
+            sample_rows = fetch_sample_data_for_single_table(table_name=table_name)
+            description = get_table_description(table_name)
+            return jsonify({"data": sample_rows, "description": description}), 200
+        except Exception as e:
+            logging.error(f"Error getting table data for {table_name}: {str(e)}", exc_info=True)
+            return jsonify({"error": "Internal server error"}), 500
+
+    @app.route("/api/code", methods=["GET"])
+    def get_code_file():
+        filepath = request.args.get("filepath")
+        if not filepath:
+            return jsonify({"error": "Filepath is required"}), 400
+        if not filepath.startswith("data_agent/"):
+            return jsonify({"error": "Invalid filepath"}), 400
+        
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        abs_filepath = os.path.normpath(os.path.join(project_root, filepath))
+        if not abs_filepath.startswith(project_root):
+            return jsonify({"error": "Invalid filepath"}), 400
+        try:
+            with open(abs_filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return jsonify({"content": content}), 200
+        except FileNotFoundError:
+            return jsonify({"error": "File not found"}), 404
+        except Exception as e:
+            logging.error(f"Error reading code file {filepath}: {str(e)}", exc_info=True)
+            return jsonify({"error": "Internal server error"}), 500
+
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_react_app(path):
+        """Serves the React app and its assets."""
         build_dir = current_app.config.get('FRONTEND_BUILD_DIR')
         if not build_dir:
             return abort(404, description="React application build directory not found.")
         
-        # If the path points to an existing file, serve it.
         if path != "" and os.path.exists(os.path.join(build_dir, path)):
             return send_from_directory(build_dir, path)
-        
-        # Otherwise, serve the index.html for client-side routing.
-        return send_from_directory(build_dir, 'index.html')
+        else:
+            return send_from_directory(build_dir, 'index.html')
 
     return app
 
-# Create the app instance using the factory
 app = create_app()
 
 if __name__ == '__main__':

@@ -1,94 +1,58 @@
-# Copyright 2025 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import collections
-from google.cloud import bigquery, dataplex_v1
-from google.cloud.bigquery.table import TableReference 
-from .constants import PROJECT_ID, DATASET_NAME, TABLE_NAMES, DATA_PROFILES_TABLE_FULL_ID, LOCATION
-import time
 import logging
-from proto.marshal.collections.repeated import RepeatedComposite
-from proto.marshal.collections.maps import MapComposite
-from .utils import fetch_bigquery_data_profiles, fetch_sample_data_for_tables, convert_proto_to_dict, fetch_table_entry_metadata
+import time
+from google.cloud import bigquery
 
-
-# --- Logging Configuration ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# It's good practice to get the logger at the module level
 logger = logging.getLogger(__name__)
 
-
-def execute_bigquery_query(sql_query: str) -> list[dict]:
+def execute_bigquery_query(sql_query: str) -> str:
     """
-    Executes a given SQL query on Google BigQuery and returns the results as a list of dictionaries.
-    Uses the globally (or module-level) defined PROJECT_ID constant.
-    Includes detailed logging using the 'logging' module.
+    Executes a read-only (SELECT) GoogleSQL query on BigQuery and returns the result.
+
+    This tool is designed to be called by an AI agent. It returns data formatted
+    as a Markdown string for easy interpretation by the LLM. It also handles
+    cases where a query runs successfully but returns no data.
 
     Args:
-        sql_query: The SQL query string to execute.
+        sql_query (str): The GoogleSQL query string to be executed. This must
+                         be a valid and complete SQL statement.
 
     Returns:
-        A list of dictionaries representing the query results.
-        Returns an empty list if the query returns no results or if an error occurs.
+        str: A string containing the query results in a Markdown table format,
+             a message indicating no results were found, or a detailed error message.
     """
     logger.info("--- Starting BigQuery query execution ---")
     start_time = time.time()
+    
+    # Log the exact query the LLM is attempting to run
+    logger.info(f"[AGENT_TOOL] Executing LLM-generated query:\n---\n{sql_query}\n---")
 
     try:
-        # --- 📍 AGENT DEBUG POINT 2: LOG THE LLM-GENERATED SQL ---
-        # This shows the exact SQL query the LLM decided to run based on the
-        # user's question and the instructions from Debug Point 1.
-        logger.info(f"[AGENT_TOOL] Executing LLM-generated query:\n---\n{sql_query}\n---")
-        client = bigquery.Client(project=PROJECT_ID)
+        client = bigquery.Client()
         logger.info("BigQuery client created successfully.")
 
-        # Execute the query
-        logger.info(f"Submitting query to BigQuery...") # Replaced print, added truncation
         query_job = client.query(sql_query)
+        results = query_job.result()  # Waits for the job to complete.
 
-        # Waits for the query to finish and get results
-        results = query_job.result()
-
-        # Convert the results to a list of dictionaries
-        logger.info("Processing results...")
-        data = [dict(row.items()) for row in results]
-        num_rows = len(data)
-        # --- 📍 AGENT DEBUG POINT 3: LOG THE RESULT FROM BIGQUERY ---
-        # This shows the data returned from BigQuery before it's sent back to the
-        # LLM for summarization. Truncating for cleaner logs.
-        log_data_preview = data[:5] # Log max 5 rows to avoid flooding the console
-        logger.info(
-            f"[AGENT_TOOL] Query successful. Fetched {num_rows} rows. "
-            f"Preview:\n---\n{log_data_preview}\n---"
-        )
-
-        end_time = time.time()
-        duration = end_time - start_time
-        logger.info(f"--- BigQuery query execution successful (Duration: {duration:.2f} seconds) ---")
-
-        return data
+        if results.total_rows > 0:
+            logger.info(f"[AGENT_TOOL] Query successful. Fetched {results.total_rows} rows.")
+            df = results.to_dataframe()
+            
+            # Return results as a Markdown string for easy processing
+            return df.to_markdown(index=False, tablefmt="pipe")
+        else:
+            # This clear message prevents the LLM from getting confused by an empty result
+            logger.info("[AGENT_TOOL] Query successful but returned no results.")
+            return "The query executed successfully but returned no matching data."
 
     except Exception as e:
-        end_time = time.time()
-        duration = end_time - start_time
-        # Log the error with traceback information using exc_info=True
         logger.error(
-            f"--- BigQuery query execution failed after {duration:.2f} seconds ---",
-            exc_info=True # This automatically adds exception info (like traceback)
+            "--- BigQuery query execution failed ---",
+            exc_info=True # Provides the full traceback in your logs for debugging
         )
-
-        return []
+        # This provides a clear error message back to the LLM
+        return f"An error occurred while executing the BigQuery query: {str(e)}"
+    
+    finally:
+        duration = time.time() - start_time
+        logger.info(f"--- BigQuery query execution finished (Duration: {duration:.2f} seconds) ---")
