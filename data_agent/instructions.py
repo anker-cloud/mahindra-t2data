@@ -94,9 +94,10 @@ def _build_master_instructions() -> str:
     )
     
     # 5. Check if in debug mode and log the final prompt as a structured JSON object
-    if os.getenv('FLASK_DEBUG') == '1' or os.getenv('DEBUG'):
-        _log_prompt_for_debugging(final_prompt)
-
+    #if os.getenv('FLASK_DEBUG') == '1' or os.getenv('DEBUG'):
+    logger.info("\n--- START: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n\n")
+    _log_prompt_for_debugging(final_prompt)
+    logger.info("---\n\n END: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n")
     # --- KPI Calculation and Logging ---
     try:
         model_for_token_count = genai.GenerativeModel(MODEL)
