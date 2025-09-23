@@ -114,12 +114,12 @@ def create_app():
         logging.info(f"User '{user_id}' logged out of session '{session_id}'.")
         return jsonify({"message": "Logout successful"}), 200
     
-
     @app.route("/api/chat", methods=["POST"])
     async def chat_handler():
-        """Handles a chat turn with the ADK agent and logs KPIs."""
+        """Handles a chat turn with the ADK agent and logs KPIs with performance breakdown."""
         start_time = time.time()
         kpi_data = collections.defaultdict(lambda: "N/A")
+        request_id = str(uuid.uuid4())
 
         runner = current_app.runner
         session_service = current_app.session_service
@@ -127,43 +127,116 @@ def create_app():
         if not all([runner, session_service, genai_types]):
             return jsonify({"error": "Chat components not initialized on the server."}), 500
         
-        session_id = None
-        user_id = None
+        # +++ FINAL KPI FIX: Inspect the agent's internal flow to get the live model object +++
+        model_name_used = "unknown"
+        llm_config_details = "default"
+        live_model_obj = None
+
+        if hasattr(runner.agent, '_llm_flow') and hasattr(runner.agent._llm_flow, '_llm'):
+            live_model_obj = runner.agent._llm_flow._llm
+        else: # Fallback for different ADK structures
+            live_model_obj = getattr(root_agent, 'model', None)
+
+        if live_model_obj:
+            model_name_used = getattr(live_model_obj, 'model_name', "unknown")
+            gen_config_obj = getattr(live_model_obj, 'generation_config', None)
+            if gen_config_obj:
+                if isinstance(gen_config_obj, dict):
+                    llm_config_details = {
+                        "temperature": gen_config_obj.get('temperature'),
+                        "top_p": gen_config_obj.get('top_p'),
+                        "top_k": gen_config_obj.get('top_k'),
+                        "max_output_tokens": gen_config_obj.get('max_output_tokens')
+                    }
+                else: # Handles object-based configs
+                    llm_config_details = {
+                        "temperature": getattr(gen_config_obj, 'temperature', None),
+                        "top_p": getattr(gen_config_obj, 'top_p', None),
+                        "top_k": getattr(gen_config_obj, 'top_k', None),
+                        "max_output_tokens": getattr(gen_config_obj, 'max_output_tokens', None)
+                    }
+
+        kpi_data["llm_model_used"] = model_name_used
+        kpi_data["llm_config"] = llm_config_details
+            
+        session_id, user_id = None, None
+        last_known_error = None
+
+        kpi_timings = []
+        last_timestamp = start_time
+        current_phase = "initial_llm_reasoning_time"
+
         try:
             req_data = request.get_json()
             user_id = req_data.get('user_id')
             session_id = req_data.get('session_id')
             message_text = req_data.get('message', {}).get('message')
 
-            kpi_data.update({"user_id": user_id, "session_id": session_id, "question": message_text})
+            kpi_data.update({"request_id": request_id, "user_id": user_id, "session_id": session_id, "question": message_text})
 
             if not all([user_id, session_id, message_text]):
-                return jsonify({"error": "user_id, session_id, and message are required"}), 400
-            
-            # The logic to calculate turn_count before the agent run has been removed.
+                return jsonify({"error": "user_id, session_id, and message are required. Try logging out & login back"}), 400
             
             final_response_parts, llm_response_text = [], ""
             kpi_data["llm_round_trips"] = 0
+
+            logging.info("==============================================================")
+            logging.info(f"==> NEW REQUEST [ID: {request_id}] <== User: {user_id} Session: {session_id} Question: {message_text}")
+            logging.info("==============================================================")
             
-            async for event in runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=genai_types.Content(parts=[genai_types.Part(text=message_text)], role='user')
-            ):
-                if event.error_code:
-                    final_response_parts.append({"role": "assistant", "content": "I'm sorry, I encountered a technical issue..."})
-                    kpi_data["agent_error"] = event.error_code
-                    break 
-                
-                if hasattr(event, 'content') and event.content:
-                    if event.content.role == 'model': kpi_data["llm_round_trips"] += 1
-                    for part in event.content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            final_response_parts.append({"role": event.content.role or "model", "content": part.text})
-                            llm_response_text += part.text
-                        if hasattr(part, 'function_call') and part.function_call:
-                            raw_sql = part.function_call.args.get('sql_query')
-                            if raw_sql: kpi_data["generated_sql"] = ' '.join(line.strip() for line in raw_sql.splitlines())
+            try:
+                async for event in runner.run_async(
+                    user_id=user_id,
+                    session_id=session_id,
+                    new_message=genai_types.Content(parts=[genai_types.Part(text=message_text)], role='user')
+                ):
+                    if event.error_code:
+                        last_known_error = event.error_message or f"Agent encountered an error with code: {event.error_code}"
+                        logging.error(f"[Request ID: {request_id}] ADK/LLM Communication Error: {last_known_error}")
+                        break 
+                    
+                    if hasattr(event, 'content') and event.content:
+                        if event.content.role == 'model': kpi_data["llm_round_trips"] += 1
+
+                        for part in event.content.parts:
+                            log_details = {"role": event.content.role}
+
+                            if hasattr(part, 'text') and part.text:
+                                log_details['text'] = part.text
+                                final_response_parts.append({"role": event.content.role or "model", "content": part.text})
+                                llm_response_text += part.text
+                            
+                            if hasattr(part, 'function_call') and part.function_call:
+                                duration = time.time() - last_timestamp
+                                kpi_timings.append({ "phase": current_phase, "duration_seconds": f"{duration:.2f}"})
+                                last_timestamp = time.time()
+                                current_phase = "tool_execution_time"
+
+                                log_details['function_call'] = {"name": part.function_call.name, "args": part.function_call.args}
+                                raw_sql = part.function_call.args.get('sql_query')
+                                if raw_sql: kpi_data["generated_sql"] = ' '.join(line.strip() for line in raw_sql.splitlines())
+                            
+                            if hasattr(part, 'function_response') and part.function_response:
+                                duration = time.time() - last_timestamp
+                                kpi_timings.append({ "phase": current_phase, "duration_seconds": f"{duration:.2f}"})
+                                last_timestamp = time.time()
+                                current_phase = "subsequent_llm_reasoning_time"
+
+                                tool_result = part.function_response.response.get('result', '')
+                                log_details['function_response'] = {"name": part.function_response.name, "result": tool_result}
+                                if "error" in tool_result.lower():
+                                    last_known_error = tool_result
+                                    logging.warning(f"[Request ID: {request_id}] Tool Execution Error Detected: {tool_result}")
+
+                            logging.debug(f"[Request ID: {request_id}] [ADK_EVENT_TRACE] {json.dumps(log_details)}")
+            
+            except Exception as agent_error:
+                logging.error(f"[Request ID: {request_id}] An unexpected error occurred during the agent stream: {agent_error}", exc_info=True)
+                last_known_error = f"A critical error occurred while processing your request: {agent_error}"
+
+            if last_known_error and not final_response_parts:
+                error_for_ui = f"I'm sorry, I ran into a problem. Details: {last_known_error}"
+                final_response_parts.append({"role": "assistant", "content": error_for_ui})
             
             kpi_data["clarification_asked"] = True if kpi_data["generated_sql"] == "N/A" and llm_response_text else False
             
@@ -171,29 +244,31 @@ def create_app():
 
         except Exception as e:
             kpi_data["server_error"] = str(e)
-            logging.error(f"Error during chat processing: {str(e)}", exc_info=True)
+            logging.error(f"[Request ID: {request_id}] Error during chat processing: {str(e)}", exc_info=True)
             return jsonify({"session_id": session_id or "", "messages": [], "error": f"Internal server error: {str(e)}"}), 500
         finally:
+            if last_known_error:
+                kpi_data["final_agent_error"] = last_known_error
+
+            # Add final performance timings to the KPI data, only if some timings were recorded
+            if kpi_timings:
+                kpi_data["performance_breakdown"] = kpi_timings
+            
             kpi_data["total_request_time"] = f"{time.time() - start_time:.2f}s"
             
             if user_id and session_id:
                 try:
                     final_session = session_service.get_session(app_name=runner.app_name, user_id=user_id, session_id=session_id)
-                    session_details_for_log = pprint.pformat(final_session)
-                    #logging.debug(f"\n--- Final Session Object Dump ---\n{session_details_for_log}\n---------------------------------")
-                    
-                    # --- FINAL FIX: Use the correct attribute name 'events' ---
                     session_events = getattr(final_session, 'events', [])
-                    # The turn count is the total number of events with the author 'user'
                     kpi_data["turn_count"] = len([evt for evt in session_events if evt.author == 'user'])
                 except Exception as e:
-                    logging.warning(f"Could not fetch final session history for KPI logging: {e}")
+                    logging.warning(f"[Request ID: {request_id}] Could not fetch final session history for KPI logging: {e}")
 
             final_kpis = dict(kpi_data)
             kpi_json_str = json.dumps(final_kpis, indent=2)
             log_summary = f"""
 \n======================================================================
-==                  [KPI_LOG] Request Summary                   ==
+==              [KPI_LOG] Request Summary (ID: {request_id})           ==
 ======================================================================
 {kpi_json_str}
 ======================================================================
@@ -301,3 +376,4 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
     logging.info(f"Starting Flask development server on http://0.0.0.0:{port} (debug={debug_mode})...")
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
+
