@@ -129,7 +129,7 @@ data_profile_information: |
           * Knowledge of data distribution can help in choosing more efficient query patterns.
           * **Aid in Clarification (Step 3):** When a user's query about specific values is ambiguous, use the data profiles (especially `top_n`, `min_value`, `max_value`) to present more informed options. For example, if a user asks for "high usage", the `quartile_upper` or `max_value` for a usage column can help define what "high" might mean in the context of the actual data.
 
-      Note: Data profile information is optional. If it is not provided (i.e., the {data_profiles} section below is empty or indicates unavailability), rely solely on the schema information for query generation. You may need to make more conservative assumptions about data values or ask the user for clarification on specific value-based filters if common values or ranges are unknown.
+      Note: Data profile information is optional. If it is not provided (i.e., the section below is empty or indicates unavailability), rely solely on the schema information for query generation. You may need to make more conservative assumptions about data values or ask the user for clarification on specific value-based filters if common values or ranges are unknown.
 
   {data_profiles}
 

@@ -14,148 +14,115 @@
 
 import os
 import datetime
-import logging, json, yaml
-from .custom_tools import execute_bigquery_query
-from .utils import fetch_bigquery_data_profiles, fetch_sample_data_for_tables, fetch_table_entry_metadata
-from .constants import PROJECT_ID, DATASET_NAME, TABLE_NAMES
+import logging
+import json
+import yaml
+import time
+import google.generativeai as genai
 
-# --- CORRECT LOGGING SETUP ---
-# Get a logger instance for this module. It will inherit its configuration
-# (level, format, stream) from the central setup in app.py.
-# The incorrect logging.basicConfig() call has been removed.
+# Import your project's modules
+from .utils import (
+    fetch_table_entry_metadata,
+    fetch_bigquery_data_profiles,
+    fetch_sample_data_for_tables,
+    log_startup_kpis
+)
+from .constants import MODEL
+
 logger = logging.getLogger(__name__)
-
 
 def json_serial_default(obj):
     """JSON serializer for objects not serializable by default json code"""
     if isinstance(obj, (datetime.date, datetime.datetime)):
         return obj.isoformat()
-    raise TypeError (f"Type {type(obj)} not serializable")
+    raise TypeError(f"Type {type(obj)} not serializable")
+
+def _log_prompt_for_debugging(prompt_content: str):
+    """
+    (NEW) Logs the entire prompt as a single, structured JSON payload.
+    This allows for easy viewing and copying from the Cloud Logging UI.
+    """
+    try:
+        # Create a dictionary payload. This is the standard for structured logging.
+        log_payload = {
+            "severity": "INFO",
+            "message": "Complete agent instructions for debugging. Expand the jsonPayload to view.",
+            "full_prompt": prompt_content
+        }
+        # Print the dictionary as a single-line JSON string.
+        # Cloud Logging will automatically parse this.
+        print(json.dumps(log_payload))
+
+    except Exception as e:
+        logger.warning(f"Could not create or log the structured debug prompt: {e}")
 
 
 def _build_master_instructions() -> str:
     """
-    (Internal Helper) Fetches and formats all the static context data for the agent.
-    This expensive function is designed to run only ONCE when the server starts.
+    (Internal Helper) Fetches, formats, and combines all context for the agent.
+    This function runs only once at server startup and logs KPIs.
     """
+    app_start_time = time.time()
     logger.info("Building master agent instructions... (This should only run once!)")
     
-    # 1. Fetch Table Metadata
-    table_metadata_raw = fetch_table_entry_metadata()
+    # 1. Fetch all dynamic data from utils
+    table_metadata = fetch_table_entry_metadata()
+    data_profiles = fetch_bigquery_data_profiles()
+    samples = []
+    if not data_profiles:
+        logger.info("Data profiles not found. Fetching sample data as a fallback.")
+        samples = fetch_sample_data_for_tables()
+
+    # 2. Format data into strings for the prompt
+    table_metadata_str = json.dumps(table_metadata, indent=2, default=json_serial_default)
+    data_profiles_str = json.dumps(data_profiles, indent=2, default=json_serial_default)
+    samples_str = json.dumps(samples, indent=2, default=json_serial_default)
     
-    # --- Formatting logic for table metadata ---
-    if not table_metadata_raw:
-        table_metadata_string_for_prompt = "Table metadata information is not available."
-    else:
-        formatted_metadata = []
-        for metadata in table_metadata_raw:
-            try:
-                metadata_str = json.dumps(metadata, indent=2, ensure_ascii=False, default=json_serial_default)
-                formatted_metadata.append(f"**Table Entry Metadata:**\n```json\n{metadata_str}\n```")
-            except TypeError as e:
-                logger.warning(f"Could not serialize table metadata: {e}")
-                formatted_metadata.append("Table metadata contains non-serializable data.")
-        table_metadata_string_for_prompt = "\n\n---\n\n".join(formatted_metadata)
-
-    # 2. Fetch Data Profiles
-    data_profiles_raw = fetch_bigquery_data_profiles()
-
-    data_profiles_string_for_prompt = ""
-    samples_string_for_prompt = ""
-
-    if data_profiles_raw: # If data profiles are available
-        logger.info(f"Data profiles found ({len(data_profiles_raw)} entries). Formatting for prompt.")
-        # --- Formatting logic for data profiles ---
-        formatted_profiles = []
-        for profile in data_profiles_raw:
-            try:
-                profile_str = json.dumps(profile, indent=2, ensure_ascii=False, default=json_serial_default)
-            except TypeError as e:
-                logger.warning(f"Could not serialize profile part: {e}. Profile: {profile}")
-                profile_str = f"Profile for column '{profile.get('source_column_name', profile.get('column_name'))}' in table '{profile.get('source_table_id')}' contains non-serializable data."
-
-            column_key = profile.get('source_column_name', profile.get('column_name'))
-            table_key = profile.get('source_table_id')
-            formatted_profiles.append(f"Data profile for column '{column_key}' in table '{table_key}':\n{profile_str}")
-        
-        data_profiles_string_for_prompt = "\n\n---\n\n".join(formatted_profiles) if formatted_profiles else "Data profiles were processed but no displayable content was generated."
-        
-        samples_string_for_prompt = "Full data profiles are provided; sample data section is omitted for brevity in this context. If needed, sample data can be fetched for specific tables based on constants."
-    else: # If data profiles are not available, fetch sample data based on constants
-        logger.info("Data profiles not found. Attempting to fetch sample data based on constants...")
-        data_profiles_string_for_prompt = "Data profile information is not available. Please refer to the sample data below."
-        
-        sample_data_raw = fetch_sample_data_for_tables(num_rows=3)
-        
-        # --- Formatting logic for sample data ---
-        if sample_data_raw:
-            logger.info(f"Sample data fetched ({len(sample_data_raw)} tables). Formatting for prompt.")
-            formatted_samples = []
-            for item in sample_data_raw:
-                try:
-                    sample_rows_str = json.dumps(item['sample_rows'], indent=2, ensure_ascii=False, default=json_serial_default)
-                except TypeError as e:
-                    logger.warning(f"Could not serialize sample_rows for table {item.get('table_name')}: {e}. Sample rows: {item.get('sample_rows')}")
-                    sample_rows_str = f"Sample rows for table {item.get('table_name')} contain non-serializable data."
-
-                formatted_samples.append(
-                    f"**Sample Data for table `{item['table_name']}` (first {len(item.get('sample_rows',[]))} rows):**\n"
-                    f"```json\n{sample_rows_str}\n```"
-                )
-            samples_string_for_prompt = "\n\n---\n\n".join(formatted_samples)
-        else:
-            logger.warning(f"Could not fetch sample data for the target scope: {PROJECT_ID}.{DATASET_NAME} (Tables: {TABLE_NAMES if TABLE_NAMES else 'All'}).")
-            samples_string_for_prompt = f"Could not fetch sample data for the target scope: {PROJECT_ID}.{DATASET_NAME} (Tables: {TABLE_NAMES if TABLE_NAMES else 'All'})."
-    
-    # 3. Format the final instruction string
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # 3. Load the static instruction template from the YAML file
+    script_dir = os.path.dirname(__file__)
     yaml_file_path = os.path.join(script_dir, 'instructions.yaml')
-    try:
-        with open(yaml_file_path, 'r') as f:
-            instructions_yaml = yaml.safe_load(f)
-            instruction_template_from_yaml = "\n".join([
-                instructions_yaml.get('overall_workflow', ''),
-                instructions_yaml.get('bigquery_data_schema_and_context', ''),
-                instructions_yaml.get('table_schema_and_join_information', ''),
-                instructions_yaml.get('critical_joining_logic_and_context', ''),
-                instructions_yaml.get('data_profile_information', ''),
-                instructions_yaml.get('sample_data', ''),
-                instructions_yaml.get('usecase_specific_table_information', ''),
-                instructions_yaml.get('few_shot_examples', '')
-            ])
-            if not instruction_template_from_yaml.strip():
-                raise ValueError("Instruction template loaded from YAML is empty.")
-    except Exception as e:
-        logger.error(f"Error loading or processing instructions.yaml: {e}")
-        raise
+    with open(yaml_file_path, 'r', encoding='utf-8') as f:
+        instructions_yaml = yaml.safe_load(f)
+    
+    instruction_template = "\n---\n".join(instructions_yaml.values())
 
-    # These logs will show the exact context being fed into the prompt template.
-    logger.debug(
-        f"Formatted Table Metadata for prompt:\n---\n{table_metadata_string_for_prompt}\n---"
-    )
-    logger.debug(
-        f"Formatted Data Profiles for prompt:\n---\n{data_profiles_string_for_prompt}\n---"
-    )
-    logger.debug(
-        f"Formatted Sample Data for prompt:\n---\n{samples_string_for_prompt}\n---"
-    )
-
-    final_instruction = instruction_template_from_yaml.format(
-        table_metadata=table_metadata_string_for_prompt,
-        data_profiles=data_profiles_string_for_prompt,
-        samples=samples_string_for_prompt
+    # 4. Inject dynamic data into the final prompt
+    final_prompt = instruction_template.format(
+        table_metadata=table_metadata_str,
+        data_profiles=data_profiles_str,
+        samples=samples_str
     )
     
-    logger.info(
-        f"[AGENT_INSTRUCTIONS] Caching complete. Final prompt length: {len(final_instruction)} characters."
+    # 5. Check if in debug mode and log the final prompt as a structured JSON object
+    #if os.getenv('FLASK_DEBUG') == '1' or os.getenv('DEBUG'):
+    logger.info("\n--- START: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n\n")
+    _log_prompt_for_debugging(final_prompt)
+    logger.info("---\n\n END: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n")
+    # --- KPI Calculation and Logging ---
+    try:
+        model_for_token_count = genai.GenerativeModel(MODEL)
+        token_count = model_for_token_count.count_tokens(final_prompt).total_tokens
+    except Exception as e:
+        token_count = 0
+        logging.warning(f"Could not calculate token count: {e}")
+    total_load_time = time.time() - app_start_time
+    
+    log_startup_kpis(
+        metadata=table_metadata, 
+        profiles=data_profiles,
+        token_count=token_count,
+        load_time=total_load_time
     )
-    return final_instruction
+    # --- End KPI Logic ---
 
-# This variable is populated only ONCE when the Python module is first imported.
+    logger.info(f"[AGENT_INSTRUCTIONS] Caching complete. Final prompt length: {len(final_prompt)} characters.")
+    return final_prompt
+
+# This variable is populated only ONCE when the module is first imported.
 CACHED_INSTRUCTIONS = _build_master_instructions()
 
 def return_instructions_bigquery() -> str:
-    """
-    Returns the pre-cached master instructions instantly from a module-level variable.
-    """
+    """Returns the pre-cached master instructions instantly from a module-level variable."""
+    logger.debug("[AGENT_INSTRUCTIONS] CACHED_INSTRUCTIONS requested.")
     return CACHED_INSTRUCTIONS
+
