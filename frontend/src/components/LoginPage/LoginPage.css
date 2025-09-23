@@ -8,30 +8,33 @@
 }
 
 .login-form {
-    padding: 2.5rem 3rem; /* Increased padding */
+    padding: 2.5rem 3rem; /* Comfortable padding */
     background: white;
-    border-radius: 10px; /* Slightly more rounded corners */
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Stronger, softer shadow */
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Soft shadow */
     width: 100%;
-    max-width: 450px; /* Wider form */
+    max-width: 450px; /* Fixed form width */
     text-align: center;
 }
 
-.mahindra-logo {
-    width: 180px; /* Adjust size as per screenshot */
-    margin-bottom: 1.5rem;
+/* ✅ Mahindra Rise Logo */
+.logo {
+    width: 180px;          /* Recommended width */
+    height: auto;          /* Maintain aspect ratio */
+    margin: 0 auto 1.5rem auto; /* Center + clear space */
+    display: block;
 }
 
 .welcome-text {
     color: #d9001c; /* Mahindra Red */
-    font-size: 1.6em; /* Slightly larger heading */
-    margin-bottom: 2rem; /* More space below welcome text */
+    font-size: 1.6em;
+    margin-bottom: 2rem;
     font-weight: 600;
 }
 
 .error-message {
     color: #d93025;
-    margin-bottom: 1.5rem; /* More space for error */
+    margin-bottom: 1.5rem;
     font-size: 0.95rem;
     background-color: #ffe0e0;
     padding: 0.75rem;
@@ -40,23 +43,23 @@
 }
 
 .form-group {
-    margin-bottom: 1.5rem; /* More space between form groups */
+    margin-bottom: 1.5rem;
     text-align: left;
 }
 
 .form-group label {
     display: block;
-    margin-bottom: 0.6rem; /* Space between label and input */
-    font-weight: 500; /* Slightly lighter font weight for labels */
+    margin-bottom: 0.6rem;
+    font-weight: 500;
     color: #333;
     font-size: 0.95rem;
 }
 
 .login-input,
 .login-select {
-    width: calc(100% - 20px); /* Account for padding */
-    padding: 0.8rem 10px; /* Comfortable padding */
-    border: 1px solid #e0e0e0; /* Lighter border */
+    width: calc(100% - 20px);
+    padding: 0.8rem 10px;
+    border: 1px solid #e0e0e0;
     border-radius: 5px;
     box-sizing: border-box;
     font-size: 1rem;
@@ -66,35 +69,34 @@
 
 .login-input:focus,
 .login-select:focus {
-    border-color: #d9001c; /* Mahindra Red on focus */
+    border-color: #d9001c;
     outline: none;
-    box-shadow: 0 0 0 2px rgba(217, 0, 28, 0.2); /* Soft red glow on focus */
+    box-shadow: 0 0 0 2px rgba(217, 0, 28, 0.2);
 }
 
 .login-select {
-    appearance: none; /* Remove default dropdown arrow */
+    appearance: none;
     background-image: url('data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 20px;
 }
 
-
 .login-button {
     width: 100%;
-    padding: 1rem; /* Larger button */
+    padding: 1rem;
     border: none;
     border-radius: 5px;
     background-color: #d9001c; /* Mahindra Red */
     color: white;
-    font-size: 1.1rem; /* Larger font for button */
-    font-weight: 700; /* Bolder button text */
+    font-size: 1.1rem;
+    font-weight: 700;
     cursor: pointer;
     transition: background-color 0.2s, box-shadow 0.2s;
-    margin-top: 1.5rem; /* Space above button */
+    margin-top: 1.5rem;
 }
 
 .login-button:hover {
-    background-color: #b00018; /* Darker red on hover */
+    background-color: #b00018;
     box-shadow: 0 4px 10px rgba(217, 0, 28, 0.3);
 }

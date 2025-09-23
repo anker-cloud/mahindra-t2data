@@ -167,5 +167,20 @@
   width: 20px;
   height: 20px;
 }
+/* --- ADDED FOR BOTTOM LOGO --- */
+.bottom-logo {
+  margin-top: auto;           /* pushes logo to bottom */
+  padding: 16px 0;
+  text-align: center;
+}
 
+.bottom-logo img {
+  max-width: 150px;           /* adjust as needed */
+  width: 100%;
+  height: auto;
+  background-color: #fff;     /* optional background */
+  border-radius: 8px;         /* optional rounded corners */
+  padding: 4px;               /* optional padding */
+}
+/* --- END BOTTOM LOGO --- */
 /* END frontend/src/components/VerticalNav/VerticalNav.css */

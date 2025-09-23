@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import mahindralogo from '../../assets/mahindra-logo.png'; // Make sure this path to your logo is correct
 import './LoginPage.css';
+import MahindraRiseRED from "../../assets/Mahindra Rise RED.png";
 
 const LoginPage = ({ onLogin }) => {
     const [userId, setUserId] = useState('');
@@ -55,8 +55,8 @@ const LoginPage = ({ onLogin }) => {
     return (
         <div className="login-container">
             <form onSubmit={handleLogin} className="login-form">
-                <img src={mahindralogo} alt="Mahindra Logo" className="mahindra-logo" />
-                <h3 className="welcome-text">Welcome to Talk to Data</h3>
+                <img src={MahindraRiseRED} alt="Mahindra Rise RED" className="logo" />
+                {/* <h3 className="welcome-text">Welcome to Talk to Data</h3> */}
 
                 {error && <p className="error-message">{error}</p>}
 

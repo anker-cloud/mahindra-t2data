@@ -1,152 +1,422 @@
+// import React, { useState, useEffect, useRef } from 'react';
+// import ReactMarkdown from 'react-markdown';
+// import remarkGfm from 'remark-gfm';
+// import './ChatInterface.css';
+
+// // Placeholder for an icon, you would typically use an SVG or an icon library
+// const SendIcon = () => (
+//   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+//     <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+//   </svg>
+// );
+
+// // Simple Typing Indicator Component
+// const TypingIndicator = () => {
+//   const phrases = [
+//     "  Thinking about the query",
+//     "  Understanding the table schema and underlying data",
+//     "  Generating a plan to come up with answers and insights",
+//     "  Performing accurate NL2SQL conversion",
+//     "  Making API calls to BigQuery",
+//     "  Fetching SQL response from BigQuery",
+//     "  Processing result",
+//   ];
+//   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+
+//   useEffect(() => {
+//     const interval = setInterval(() => {
+//       setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
+//     }, 5000); // Change phrase every 2 seconds
+
+//     return () => clearInterval(interval); // Clean up the interval on component unmount
+//   }, [phrases.length]);
+
+//   return (
+//     <div className="message bot typing-indicator">
+//       <div className="message-bubble">
+//       <div className="typing-dots">
+//           <span className="dot"></span>
+//           <span className="dot"></span>
+//           <span className="dot"></span>
+//         </div>
+//         <div className="typing-text">
+//           {phrases[currentPhraseIndex]}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const suggestedQuestions = [
+//   { heading: 'Understanding BQ Dataset', question: 'Describe the tables and the data that you can answer questions over.' },
+//   { heading: 'Higher Distribution Cost', question: 'Identify and show distribution centers with unusually high distribution costs relative to the average distribution costs for similar product categories?'},
+//   { heading: 'Problematic Product categories', question: 'Calculate the return rate per product category, considering only orders that have been both shipped and delivered, to identify problematic product categories?' },
+//   { heading: 'Multi-Channel Attribution', question: 'Calculate the conversion rate (percentage of events leading to an order) for each browser type, to optimize website compatibility and user experience?' },
+//   { heading: 'Most Expensive Products', question: 'Find the top 5 most expensive products (based on retail price) within each category?' },
+//   { heading: 'Potential Bot Attacks', question: 'Identify IP addresses associated with a disproportionately high number of distinct user sessions, potentially indicating shared proxies or bot networks?' },
+// ];
+
+// const ChatInterface = () => {
+//   const [messages, setMessages] = useState([
+//     { id: 1, text: "Hello! I am Retail DataWise. I can answer business questions over your BigQuery data. How can I assist you today?", sender: 'bot', timestamp: new Date() }
+//   ]);
+//   const [inputValue, setInputValue] = useState('');
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [sessionId, setSessionId] = useState(null);
+//   const [userId] = useState(`user_${Date.now()}`); // Simple unique user ID
+
+//   const messagesEndRef = useRef(null);
+
+//   const scrollToBottom = () => {
+//     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+//   };
+
+//   useEffect(scrollToBottom, [messages]);
+
+//   const handleInputChange = (e) => {
+//     setInputValue(e.target.value);
+//   };
+
+//   const handleSuggestionClick = (question) => {
+//     setInputValue(question); // Set the input value to the suggested question
+//     // Programmatically trigger the send message action
+//     // We need to simulate the event object or modify handleSendMessage to accept the message directly
+//     // Let's modify handleSendMessage to accept an optional message string
+//     // handleSendMessage({ preventDefault: () => {} }, question); // Pass a dummy event and the question
+//   };
+
+//   // Modify handleSendMessage to accept an optional message string
+//   const handleSendMessage = async (e, messageString = inputValue) => {
+//     e.preventDefault();
+//     const messageToSend = messageString.trim(); // Use the passed string or current inputValue
+//     if (messageToSend === '' || isLoading) return;
+
+//     const userMessage = { id: Date.now(), text: messageToSend, sender: 'user', timestamp: new Date() };
+//     setMessages(prevMessages => [...prevMessages, userMessage]);
+//     setInputValue(''); // Clear input after sending
+//     setIsLoading(true);
+
+//     try {
+//       let requestBody;
+//       const currentInputValue = messageToSend; // Use the captured messageToSend
+
+//       if (!sessionId) {
+//         console.log("No session ID, creating a new session and sending message...");
+//         requestBody = {
+//           user_id: userId,
+//           message: { message: currentInputValue, role: 'user' }
+//         };
+//       } else {
+//         console.log("Existing session ID, sending message:", sessionId);
+//         requestBody = {
+//           user_id: userId,
+//           session_id: sessionId,
+//           message: { message: currentInputValue, role: 'user' }
+//         };
+//       }
+
+//       const response = await fetch('/api/chat', {
+//         method: 'POST',
+//         headers: { 'Content-Type': 'application/json' },
+//         body: JSON.stringify(requestBody)
+//       });
+
+//       if (!response.ok) {
+//         const errorData = await response.json().catch(() => ({ detail: "Unknown error occurred" }));
+//         throw new Error(`HTTP error! status: ${response.status} - ${errorData.detail || errorData.error || "Failed to send/process message"}`);
+//       }
+
+//       const data = await response.json();
+
+//       if (!sessionId && data.session_id) {
+//         setSessionId(data.session_id);
+//         console.log("New session created and ID set:", data.session_id);
+//       }
+
+//       if (data.messages && data.messages.length > 0) {
+//         const botReplies = data.messages.map((msg, index) => ({
+//           id: Date.now() + index,
+//           text: msg.content,
+//           sender: msg.role === 'user' ? 'user' : 'bot',
+//           timestamp: new Date()
+//         }));
+//         setMessages(prevMessages => [...prevMessages, ...botReplies]);
+//       } else if (data.error) {
+//          throw new Error(data.error);
+//       } else if (!sessionId && !data.session_id) {
+//         throw new Error("Failed to retrieve session ID and no messages received.");
+//       } else if (data.messages && data.messages.length === 0) {
+//         console.warn("Received empty messages array from bot, but no error:", data);
+//       }
+
+//     } catch (error) {
+//       console.error('Error sending message:', error);
+//       setMessages(prevMessages => [...prevMessages, { id: Date.now(), text: `Error: ${error.message}`, sender: 'system', timestamp: new Date() }]);
+//     } finally {
+//         setIsLoading(false);
+//         document.querySelector('.chat-input input')?.focus();
+//     }
+//   };
+
+//   const formatTimestamp = (date) => {
+//     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+//   };
+
+//   return (
+//     <div className="chat-interface-page"> {/* Renamed for clarity and page-level styling */}
+//       <header className="page-header chat-page-header">
+//         <h1>DataWise Agent Chat</h1>
+//       </header>
+//       <div className="chat-interface"> {/* Kept original for existing styles, will adjust CSS */}
+//         <div className="chat-messages">
+//           {messages.map((msg) => (
+//             <div key={msg.id} className={`message ${msg.sender}`}>
+//             <div className="message-bubble">
+//               <ReactMarkdown className="message-text" remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+//               <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
+//             </div>
+//           </div>
+//         ))}
+//         {isLoading && messages[messages.length - 1]?.sender === 'user' && <TypingIndicator />} {/* Conditionally render typing indicator */}
+//         <div ref={messagesEndRef} />
+//       </div>
+//       <div className="suggested-questions">
+//         {suggestedQuestions.map((suggestion, index) => (
+//           <div
+//             key={index}
+//             className="suggestion-card"
+//             onClick={() => handleSuggestionClick(suggestion.question)}
+//           >
+//             <h4>{suggestion.heading}</h4>
+//             <p>{suggestion.question}</p>
+//           </div>
+//         ))}
+//       </div>
+//       <form className="chat-input-area" onSubmit={handleSendMessage}>
+//         <input
+//           type="text"
+//           value={inputValue}
+//           onChange={handleInputChange}
+//           placeholder="Type your message..."
+//           aria-label="Chat input"
+//           disabled={isLoading}
+//         />
+//         <button type="submit" disabled={isLoading || inputValue.trim() === ''} aria-label="Send message">
+//           {isLoading ? <div className="loader"></div> : <SendIcon />}
+//         </button>
+//       </form>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default ChatInterface;
+
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './ChatInterface.css';
 
-// Your existing SendIcon component
+// Placeholder for an icon
 const SendIcon = () => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
-    </svg>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
+  </svg>
 );
 
-// Your existing TypingIndicator component
+// Typing Indicator Component
 const TypingIndicator = () => {
-    const phrases = [ "Thinking...", "Generating a plan...", "Performing NL2SQL conversion...", "Querying BigQuery...", "Processing result..." ];
-    const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [phrases.length]);
-    return (
-        <div className="message bot typing-indicator">
-            <div className="message-bubble">
-                <div className="typing-dots">
-                    <span className="dot"></span><span className="dot"></span><span className="dot"></span>
-                </div>
-                <div className="typing-text">{phrases[currentPhraseIndex]}</div>
-            </div>
+  const phrases = [
+    "Thinking about the query",
+    "Understanding the table schema and underlying data",
+    "Generating a plan to come up with answers and insights",
+    "Performing accurate NL2SQL conversion",
+    "Making API calls to BigQuery",
+    "Fetching SQL response from BigQuery",
+    "Processing result",
+  ];
+  const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentPhraseIndex((prevIndex) => (prevIndex + 1) % phrases.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [phrases.length]);
+
+  return (
+    <div className="message bot typing-indicator">
+      <div className="message-bubble">
+        <div className="typing-dots">
+          <span className="dot"></span>
+          <span className="dot"></span>
+          <span className="dot"></span>
         </div>
-    );
+        <div className="typing-text">{phrases[currentPhraseIndex]}</div>
+      </div>
+    </div>
+  );
 };
 
-// --- CHANGE 1: The component now accepts 'sessionId' as a prop from App.js ---
-const ChatInterface = ({ username, sessionId }) => {
-    const [messages, setMessages] = useState([
-        { id: 1, text: `Hello ${username}! I am your Mahindra Data Agent. How can I assist you today?`, sender: 'bot', timestamp: new Date() }
-    ]);
-    const [inputValue, setInputValue] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const messagesEndRef = useRef(null);
+/* ---- Suggested Questions (Commented Out) ----
+// const suggestedQuestions = [
+//   { heading: 'Understanding BQ Dataset', question: 'Describe the tables and the data that you can answer questions over.' },
+//   { heading: 'Higher Distribution Cost', question: 'Identify and show distribution centers with unusually high distribution costs relative to the average distribution costs for similar product categories?' },
+//   { heading: 'Problematic Product categories', question: 'Calculate the return rate per product category, considering only orders that have been both shipped and delivered, to identify problematic product categories?' },
+//   { heading: 'Multi-Channel Attribution', question: 'Calculate the conversion rate (percentage of events leading to an order) for each browser type, to optimize website compatibility and user experience?' },
+//   { heading: 'Most Expensive Products', question: 'Find the top 5 most expensive products (based on retail price) within each category?' },
+//   { heading: 'Potential Bot Attacks', question: 'Identify IP addresses associated with a disproportionately high number of distinct user sessions, potentially indicating shared proxies or bot networks?' },
+// ];
+*/
 
-    // --- CHANGE 2: Removed internal userId and sessionId state. They now come from props. ---
+const ChatInterface = ({ username }) => {
+  const [messages, setMessages] = useState([
+    { id: 1, text: `Hello! I am Retail DataWise. I can answer business questions over your BigQuery data. How can I assist you today, ${username}?`, sender: 'bot', timestamp: new Date() }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState(null);
+  const [userId] = useState(`user_${Date.now()}`);
+  const [error, setError] = useState(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+  const messagesEndRef = useRef(null);
 
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        const messageToSend = inputValue.trim();
-        if (messageToSend === '' || isLoading) return;
+  useEffect(() => {
+    scrollToBottom();
+    console.log('ChatInterface mounted for user:', username);
+  }, [messages, username]);
 
-        const userMessage = { id: Date.now(), text: messageToSend, sender: 'user', timestamp: new Date() };
-        setMessages((prev) => [...prev, userMessage]);
-        setInputValue('');
-        setIsLoading(true);
-        setError(null);
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
 
-        try {
-            // --- CHANGE 3: The request body now uses the username and sessionId from props. ---
-            const requestBody = {
-                user_id: username,
-                session_id: sessionId, 
-                message: { message: messageToSend, role: 'user' }
-            };
-            
-            console.log('Sending request to /api/chat:', requestBody);
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
+  const handleSendMessage = async (e, messageString = inputValue) => {
+    e.preventDefault();
+    const messageToSend = messageString.trim();
+    if (messageToSend === '' || isLoading) return;
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: "Unknown server error" }));
-                throw new Error(`HTTP error! status: ${response.status} - ${errorData.error || "Failed to process message"}`);
-            }
+    const userMessage = { id: Date.now(), text: messageToSend, sender: 'user', timestamp: new Date() };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+    setError(null);
 
-            const data = await response.json();
-            console.log('Response from /api/chat:', data);
-            
-            // --- CHANGE 4: Removed logic to set sessionId from response. It's now fixed per session. ---
+    try {
+      const requestBody = {
+        user_id: userId,
+        ...(sessionId && { session_id: sessionId }),
+        message: { message: messageToSend, role: 'user' }
+      };
 
-            if (data.messages && data.messages.length > 0) {
-                // Map backend response {role, content} to frontend state {sender, text}
-                const botReplies = data.messages.map((msg, index) => ({
-                    id: Date.now() + index + 1,
-                    text: msg.content,
-                    sender: 'bot', // Simplified from msg.role for consistency
-                    timestamp: new Date()
-                }));
-                setMessages((prev) => [...prev, ...botReplies]);
-            } else if (data.error) {
-                throw new Error(data.error);
-            }
-        } catch (err) {
-            console.error('Error in handleSendMessage:', err);
-            setError(`Failed to get response: ${err.message}`);
-            setMessages((prev) => [...prev, { id: Date.now(), text: `Error: ${err.message}`, sender: 'system', timestamp: new Date() }]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    // Your existing timestamp formatting function
-    const formatTimestamp = (date) => {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
+      console.log('Sending request to /api/chat:', requestBody);
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
 
-    // Your existing JSX layout is preserved
-    return (
-        <div className="chat-interface-page">
-            <header className="page-header chat-page-header">
-                <h1>Talk to Mahindra Data</h1>
-            </header>
-            <div className="chat-interface">
-                <div className="chat-messages">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`message ${msg.sender}`}>
-                            <div className="message-bubble">
-                                <div className="message-text">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
-                                </div>
-                                <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
-                            </div>
-                        </div>
-                    ))}
-                    {isLoading && <TypingIndicator />}
-                    <div ref={messagesEndRef} />
-                </div>
-                
-                {/* Your existing commented-out suggested questions UI is preserved */}
-                
-                <form className="chat-input-area" onSubmit={handleSendMessage}>
-                    <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder="Type your message..." disabled={isLoading} />
-                    <button type="submit" disabled={isLoading || inputValue.trim() === ''}>
-                        {isLoading ? <div className="loader"></div> : <SendIcon />}
-                    </button>
-                </form>
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: "Unknown error" }));
+        throw new Error(`HTTP error! status: ${response.status} - ${errorData.detail || errorData.error || "Failed to send/process message"}`);
+      }
+
+      const data = await response.json();
+      console.log('Response from /api/chat:', data);
+
+      if (!sessionId && data.session_id) {
+        setSessionId(data.session_id);
+        console.log('New session ID:', data.session_id);
+      }
+
+      if (data.messages && data.messages.length > 0) {
+        const botReplies = data.messages.map((msg, index) => ({
+          id: Date.now() + index + 1,
+          text: msg.content,
+          sender: msg.role === 'user' ? 'user' : 'bot',
+          timestamp: new Date()
+        }));
+        setMessages((prev) => [...prev, ...botReplies]);
+      } else if (data.error) {
+        throw new Error(data.error);
+      } else if (!sessionId && !data.session_id) {
+        console.warn('No session ID or messages received');
+      }
+    } catch (err) {
+      console.error('Error in handleSendMessage:', err);
+      setError(`Failed to get response: ${err.message}`);
+      setMessages((prev) => [...prev, { id: Date.now(), text: `Error: ${err.message}`, sender: 'system', timestamp: new Date() }]);
+    } finally {
+      setIsLoading(false);
+      document.querySelector('.chat-input-area input')?.focus();
+    }
+  };
+
+  const formatTimestamp = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="chat-interface-page">
+      <header className="page-header chat-page-header">
+        <h1>DataWise Agent Chat</h1>
+      </header>
+      <div className="chat-interface">
+        <div className="chat-messages">
+          {messages.map((msg) => (
+            <div key={msg.id} className={`message ${msg.sender}`}>
+              <div className="message-bubble">
+                <ReactMarkdown className="message-text" remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
+              </div>
             </div>
+          ))}
+          {error && (
+            <div className="message system">
+              <div className="message-bubble">
+                <span className="message-text">{error}</span>
+              </div>
+            </div>
+          )}
+          {isLoading && messages[messages.length - 1]?.sender === 'user' && <TypingIndicator />}
+          <div ref={messagesEndRef} />
         </div>
-    );
+
+        {/* ---- Suggested Questions UI (Commented Out) ----
+        <div className="suggested-questions">
+          {suggestedQuestions.map((suggestion, index) => (
+            <div
+              key={index}
+              className="suggestion-card"
+              onClick={() => handleSuggestionClick(suggestion.question)}
+            >
+              <h4>{suggestion.heading}</h4>
+              <p>{suggestion.question}</p>
+            </div>
+          ))}
+        </div>
+        */}
+
+        <form className="chat-input-area" onSubmit={handleSendMessage}>
+          <input
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder="Type your message..."
+            aria-label="Chat input"
+            disabled={isLoading}
+          />
+          <button type="submit" disabled={isLoading || inputValue.trim() === ''} aria-label="Send message">
+            {isLoading ? <div className="loader"></div> : <SendIcon />}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default ChatInterface;

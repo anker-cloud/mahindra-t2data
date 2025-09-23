@@ -1,6 +1,6 @@
 import React from 'react';
 import './HorizontalNav.css';
-import mahindraLogo from '../../assets/mahindra-logo.png'; // Replace with your Mahindra PNG logo
+import MDP_logo from '../../assets/MDP_logo.png'; // Replace with your Mahindra PNG logo
 
 const HorizontalNav = ({ username, onLogout }) => {
   return (
@@ -8,8 +8,8 @@ const HorizontalNav = ({ username, onLogout }) => {
       <div className="nav-left">
         {/* Logo and App Title */}
         <div className="app-info">
-          <img src={mahindraLogo} alt="Mahindra Logo" height="36" className="app-logo" />
-          <span className="app-title">Talk to Data(POC)</span>
+          <img src={MDP_logo} alt="MDP_logo" height="36" className="app-logo" />
+          <span className="app-title">DIA</span>
         </div>
       </div>
 

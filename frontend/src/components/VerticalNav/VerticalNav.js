@@ -2,6 +2,9 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import './VerticalNav.css';
 
+// ✅ Import logo properly from assets folder (no dashes in variable names)
+import projectvihaanlogo from '../../assets/project-vihaan-logo.png'; // make sure the file & path exist
+
 // Define SVG icons
 const ChatIcon = () => (
   <svg className="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -27,26 +30,32 @@ const VerticalNav = () => {
       <div className="logo-container">
         <h5>Powered by Mahindra Innovation</h5>
       </div>
+
       <ul>
         <li>
           <NavLink to="/" className={({ isActive }) => isActive ? "active-link" : ""}>
-            <ChatIcon />
+            {/* <ChatIcon /> */}
             Chatbot
           </NavLink>
         </li>
         <li>
           <NavLink to="/data-preview" className={({ isActive }) => isActive ? "active-link" : ""}>
-            <DataIcon />
+            {/* <DataIcon /> */}
             Dataset Preview
           </NavLink>
         </li>
         <li>
           <NavLink to="/solution-architecture" className={({ isActive }) => isActive ? "active-link" : ""}>
-            <ArchitectureIcon />
+            {/* <ArchitectureIcon /> */}
             Solution Design
           </NavLink>
         </li>
       </ul>
+
+      {/* ✅ Logo at bottom */}
+      <div className="bottom-logo">
+        <img src={projectvihaanlogo} alt="Project Vihaan Logo" />
+      </div>
     </nav>
   );
 };
