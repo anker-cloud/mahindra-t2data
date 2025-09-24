@@ -18,7 +18,11 @@ import logging
 import json
 import yaml
 import time
+import tempfile
 import google.generativeai as genai
+
+# GCP Imports
+from google.cloud import storage
 
 # Import your project's modules
 from .utils import (
@@ -27,7 +31,7 @@ from .utils import (
     fetch_sample_data_for_tables,
     log_startup_kpis
 )
-from .constants import MODEL
+from .constants import MODEL, GCS_BUCKET_FOR_DEBUGGING
 
 logger = logging.getLogger(__name__)
 
@@ -38,24 +42,50 @@ def json_serial_default(obj):
     raise TypeError(f"Type {type(obj)} not serializable")
 
 def _log_prompt_for_debugging(prompt_content: str):
-    """
-    (NEW) Logs the entire prompt as a single, structured JSON payload.
-    This allows for easy viewing and copying from the Cloud Logging UI.
-    """
+    """Logs the entire prompt as a single, structured JSON payload for Cloud Logging."""
     try:
-        # Create a dictionary payload. This is the standard for structured logging.
         log_payload = {
             "severity": "INFO",
             "message": "Complete agent instructions for debugging. Expand the jsonPayload to view.",
             "full_prompt": prompt_content
         }
-        # Print the dictionary as a single-line JSON string.
-        # Cloud Logging will automatically parse this.
         print(json.dumps(log_payload))
-
     except Exception as e:
         logger.warning(f"Could not create or log the structured debug prompt: {e}")
 
+def _save_instructions_for_debugging(prompt_content: str):
+    """
+    Saves the final generated prompt to a file for easier debugging.
+
+    - If running in Cloud Run (K_SERVICE env var is set), it saves to a GCS bucket.
+    - Otherwise, it saves to the local system's temporary directory.
+    - All operations are wrapped in a try/except block to prevent crashes.
+    """
+    try:
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"prompt_{timestamp}.txt"
+        
+        # Check if running in a Google Cloud Run environment
+        is_cloud_run = os.environ.get('K_SERVICE')
+
+        if is_cloud_run:
+            # Save to GCS
+            client = storage.Client()
+            bucket = client.bucket(GCS_BUCKET_FOR_DEBUGGING)
+            blob = bucket.blob(filename)
+            blob.upload_from_string(prompt_content)
+            logger.info(f"Successfully saved full prompt to GCS: gs://{GCS_BUCKET_FOR_DEBUGGING}/{filename}")
+        else:
+            # Save to local temporary directory
+            temp_dir = tempfile.gettempdir()
+            file_path = os.path.join(temp_dir, filename)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(prompt_content)
+            logger.info(f"Running locally. Saved full prompt to temporary file: {file_path}")
+
+    except Exception as e:
+        # Log the error but do not raise it, so the application can continue.
+        logger.warning(f"Could not save prompt for debugging. This will not affect the application's functionality. Error: {e}")
 
 def _build_master_instructions() -> str:
     """
@@ -93,11 +123,14 @@ def _build_master_instructions() -> str:
         samples=samples_str
     )
     
-    # 5. Check if in debug mode and log the final prompt as a structured JSON object
-    #if os.getenv('FLASK_DEBUG') == '1' or os.getenv('DEBUG'):
+    # 5. Log and save the final prompt for debugging purposes
     logger.info("\n--- START: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n\n")
     _log_prompt_for_debugging(final_prompt)
     logger.info("---\n\n END: FINAL POPULATED AGENT INSTRUCTIONS (DEBUG VIEW) ---\n")
+    
+    # --- NEW: Save the instructions to a file ---
+    _save_instructions_for_debugging(final_prompt)
+    
     # --- KPI Calculation and Logging ---
     try:
         model_for_token_count = genai.GenerativeModel(MODEL)
@@ -123,6 +156,6 @@ CACHED_INSTRUCTIONS = _build_master_instructions()
 
 def return_instructions_bigquery() -> str:
     """Returns the pre-cached master instructions instantly from a module-level variable."""
+    logger.info(f"Returning CACHED_INSTRUCTIONS. Length: {len(CACHED_INSTRUCTIONS)} characters.")
     logger.debug("[AGENT_INSTRUCTIONS] CACHED_INSTRUCTIONS requested.")
     return CACHED_INSTRUCTIONS
-
