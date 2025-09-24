@@ -17,7 +17,7 @@
     text-align: center;
 }
 
-/* ✅ Mahindra Rise Logo */
+/* Mahindra Rise Logo */
 .logo {
     width: 180px;          /* Recommended width */
     height: auto;          /* Maintain aspect ratio */
@@ -26,20 +26,20 @@
 }
 
 .welcome-text {
-    color: #d9001c; /* Mahindra Red */
+    color: #2b00d9; /* Mahindra Black */
     font-size: 1.6em;
     margin-bottom: 2rem;
     font-weight: 600;
 }
 
 .error-message {
-    color: #d93025;
+    color: #1a2a5a;
     margin-bottom: 1.5rem;
     font-size: 0.95rem;
-    background-color: #ffe0e0;
+    background-color: #3a5a9a;
     padding: 0.75rem;
     border-radius: 5px;
-    border: 1px solid #d93025;
+    border: 1px solid #1a2a5a;
 }
 
 .form-group {
@@ -69,7 +69,7 @@
 
 .login-input:focus,
 .login-select:focus {
-    border-color: #d9001c;
+    border-color: #1a2a5a;
     outline: none;
     box-shadow: 0 0 0 2px rgba(217, 0, 28, 0.2);
 }
@@ -87,7 +87,7 @@
     padding: 1rem;
     border: none;
     border-radius: 5px;
-    background-color: #d9001c; /* Mahindra Red */
+    background-color: #1a2a5a; /* Mahindra Black */
     color: white;
     font-size: 1.1rem;
     font-weight: 700;
@@ -97,6 +97,6 @@
 }
 
 .login-button:hover {
-    background-color: #b00018;
+    background-color: #1a2a5a;
     box-shadow: 0 4px 10px rgba(217, 0, 28, 0.3);
 }

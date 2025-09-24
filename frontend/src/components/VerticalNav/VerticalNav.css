@@ -4,7 +4,7 @@
   width: var(--vertical-nav-width);
   height: 100%; /* Takes 100% height of .App-content-area */
   /* Gradient hue from the provided image */
-  background: linear-gradient(to bottom, #c40414, #ef3131); /* Gradient based on image */
+  background: linear-gradient(to bottom, #1a2a5a, #3a5a9a); /* Gradient based on image */
   padding: 24px 0;
   box-shadow: var(--shadow-md); /* Softer, more modern shadow */
   display: flex;
@@ -70,12 +70,12 @@
 }
 
 .vertical-nav ul li a:hover {
-  background-color: hwb(24 9% 24% / 0.2); /* Subtle hover with lighter blue accent color */
+  background-color: rgba(100, 149, 237, 0.2); /* Subtle hover with lighter blue accent color */
   color: #ffffff; /* Solid white text on hover */
 }
 
 .vertical-nav ul li a.active-link {
-  background-color: #f48e8e; /* Use lighter blue accent color for active */
+  background-color: #6495ed; /* Use lighter blue accent color for active */
   color: #ffffff; /* Solid white text for active link */
   font-weight: 600;
   box-shadow: var(--shadow-sm);
@@ -154,12 +154,12 @@
 }
 
 .vertical-nav a:hover {
-  background-color: #b8161b; /* Darker red hover */
+  background-color: #0a071a8a; /* Darker red hover */
 }
 
 .active-link {
   background-color: white;
-  color: #e31e24 !important;
+  color: #0a071a8a !important;
   font-weight: 600;
 }
 

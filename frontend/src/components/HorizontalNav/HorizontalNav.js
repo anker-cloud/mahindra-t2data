@@ -9,7 +9,7 @@ const HorizontalNav = ({ username, onLogout }) => {
         {/* Logo and App Title */}
         <div className="app-info">
           <img src={MDP_logo} alt="MDP_logo" height="36" className="app-logo" />
-          <span className="app-title">DIA</span>
+          <span className="app-title">DIA - Data and Insights for Action</span>
         </div>
       </div>
 

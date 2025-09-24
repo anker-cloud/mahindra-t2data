@@ -6,10 +6,10 @@
   justify-content: space-between;
   align-items: center;
   /* Gradient hue from the provided image */
-  background: linear-gradient(to right, #c40414, #ef3131); /* Gradient based on image */
+  background: linear-gradient(to right, #1a2a5a, #3a5a9a); /* Gradient based on image */
   padding: 0; /* Remove padding, let links handle it */
   color: #ffffff; /* White text color for dark background */
-  border-bottom: 1px solid #f48e8e; /* Darker border */
+  border-bottom: 1px solid #1a2a5a; /* Darker border */
   height: 56px; /* Slightly taller */
   box-shadow: var(--shadow-xs); /* Very subtle shadow if needed */
 }
@@ -72,13 +72,13 @@
 
 .horizontal-nav .nav-links li a:hover {
   color: #ffffff; /* Solid white text on hover */
-  border-bottom-color: #f48e8e; /* Lighter blue accent color for underline on hover */
+  border-bottom-color: #6495ed; /* Lighter blue accent color for underline on hover */
 }
 
 .horizontal-nav .nav-links li a.active-link {
   color: #ffffff; /* Solid white text for active link */
   font-weight: 600;
-  border-bottom-color: #e81434; /* Lighter blue accent color for active underline */
+  border-bottom-color: #6495ed; /* Lighter blue accent color for active underline */
 }
 
 .user-options { /* Assuming this is part of HorizontalNav or Navbar */
@@ -178,7 +178,7 @@
 }
 .horizontal-nav {
   height: var(--navbar-height);
-  background-color: #e31e24; /* Mahindra Red */
+  background-color: #3a5a9a; /* Mahindra Red */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -215,7 +215,7 @@
 
 .logout-btn {
   background: white;
-  color: #e31e24;
+  color: #131212;
   border: none;
   border-radius: 6px;
   padding: 6px 14px;
@@ -227,5 +227,18 @@
   background: #f8d7da;
 }
 
+/* Increase the logo size in HorizontalNav */
+.app-logo img {
+  height: 40px;   /* Adjust this height */
+  width: auto;    /* Keep width proportional */
+}
+
+/* Alternatively, if the logo is an SVG or div background */
+.app-logo {
+  height: 40px;   /* Adjust as needed */
+  width: auto;
+  display: flex;
+  align-items: center;
+}
 
 /* END frontend/src/components/HorizontalNav/HorizontalNav.css */

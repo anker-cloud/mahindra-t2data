@@ -43,12 +43,12 @@ const TypingIndicator = () => {
 
 // ✅ Suggested Questions Array
 const suggestedQuestions = [
-  { heading: 'Understanding BQ Dataset', question: 'Provide the list of Top 20 consumed part under Running Repair from 01-01-2025 to 01-06-2025 (Use Part Number as the Unique Key and the Output should be Part Number, Part Descp & Count in decending order.' },
-  { heading: 'Higher Distribution Cost', question: 'List the Top 20 Dealers with highest part consumption under running repair from 2025-01-01 To 2025-06-01. (Use Parent Group Code & Location Code as unique Key, Eg. RDM01-RDM2 and do the calculation as in the description and display with the unqiue key with Dealer Name, Value in decending order.'},
-  { heading: 'Problematic Product categories', question: 'List the Top Zone (Dealer Zone) & Area Office (Dealer Area Office) with highest part consumption. for full data' },
-  { heading: 'Multi-Channel Attribution', question: 'List the Top 20 (MODEL_GROP) & (FAMLY_DESC) with highest part consumption between Jan 2025 to June 2025' },
-  { heading: 'Most Expensive Products', question: 'Query for Top 10 Part which has been replaced in BOLERO & Bolero BS6 for entire data' },
-  { heading: 'Potential Bot Attacks', question: 'Give the list of most frequently replaced parts for BOLERO & Bolero BS6 by Quantity as well as Value in West Zone, Bhopal Area Office, for the dealer SOMYA VEHICLE SOLUTIONS PVT LTD at the RASULIYA_3S location for entire data' },
+  { heading: 'Top Consumed Parts', question: 'Provide the list of Top 20 consumed part under Running Repair from 01-01-2025 to 01-06-2025 (Use Part Number as the Unique Key and the Output should be Part Number, Part Descp & Count in decending order.' },
+  { heading: 'Dealers With Highest Consumption', question: 'List the Top 20 Dealers with highest part consumption under running repair from 2025-01-01 To 2025-06-01. (Use Parent Group Code & Location Code as unique Key, Eg. RDM01-RDM2 and do the calculation as in the description and display with the unqiue key with Dealer Name, Value in decending order.'},
+  { heading: 'Zones With Maximum Parts', question: 'List the Top Zone (Dealer Zone) & Area Office (Dealer Area Office) with highest part consumption. for full data' },
+  { heading: 'Top Models and Families', question: 'List the Top 20 (MODEL_GROP) & (FAMLY_DESC) with highest part consumption between Jan 2025 to June 2025' },
+  { heading: 'Highest Cost Replacement Parts', question: 'Query for Top 10 Part which has been replaced in BOLERO & Bolero BS6 for entire data' },
+  { heading: 'Most Frequently Replaced Parts', question: 'Give the list of most frequently replaced parts for BOLERO & Bolero BS6 by Quantity as well as Value in West Zone, Bhopal Area Office, for the dealer SOMYA VEHICLE SOLUTIONS PVT LTD at the RASULIYA_3S location for entire data' },
 ];
 
 const ChatInterface = ({ username, sessionId }) => {
@@ -128,7 +128,7 @@ const ChatInterface = ({ username, sessionId }) => {
     return (
         <div className="chat-interface-page">
             <header className="page-header chat-page-header">
-                <h1>Natural Language Conversation Insights</h1>
+                <h1>Natural Language Conversational  Analytics</h1>
             </header>
             <div className="chat-interface">
                 <div className="chat-messages">
