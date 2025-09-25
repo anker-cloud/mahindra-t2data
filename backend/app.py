@@ -134,13 +134,12 @@ def create_app():
             user_id = req_data.get('user_id')
             session_id = req_data.get('session_id')
             message_text = req_data.get('message', {}).get('message')
+            logging.info(f"======> [CHAT_NEW_REQUEST_STARTS] from user '{user_id}' in session '{session_id}': {message_text}")
 
             kpi_data.update({"user_id": user_id, "session_id": session_id, "question": message_text})
 
             if not all([user_id, session_id, message_text]):
                 return jsonify({"error": "user_id, session_id, and message are required"}), 400
-            
-            # The logic to calculate turn_count before the agent run has been removed.
             
             final_response_parts, llm_response_text = [], ""
             kpi_data["llm_round_trips"] = 0
@@ -151,7 +150,7 @@ def create_app():
                 new_message=genai_types.Content(parts=[genai_types.Part(text=message_text)], role='user')
             ):
                 if event.error_code:
-                    final_response_parts.append({"role": "assistant", "content": "I'm sorry, I encountered a technical issue..."})
+                    final_response_parts.append({"role": "assistant", "content": "I'm sorry, I encountered a technical issue...{event.error_code}"})
                     kpi_data["agent_error"] = event.error_code
                     break 
                 
@@ -159,28 +158,35 @@ def create_app():
                     if event.content.role == 'model': 
                         kpi_data["llm_round_trips"] += 1
                         
-                        # --- HIDE LLM PLAN ---
-                        # Check if any part in this model's response contains a function call.
-                        # If it does, it's part of the agent's "thought process" and we should
-                        # not show the explanatory text to the end-user.
-                        contains_function_call = any(hasattr(p, 'function_call') and p.function_call for p in event.content.parts)
+                        # --- FIX: Logic to show SQL once and hide intermediate text ---
+                        text_in_this_turn = ""
+                        sql_in_this_turn = None
 
+                        # Step 1: Extract all text and SQL from the current model event.
                         for part in event.content.parts:
-                            # Always capture text for internal logic/logging.
                             if hasattr(part, 'text') and part.text:
-                                llm_response_text += part.text
-                                # Only add the text to the final response if it's a direct answer,
-                                # NOT part of a plan to call a tool.
-                                if not contains_function_call:
-                                    final_response_parts.append({"role": event.content.role or "model", "content": part.text})
-                            
-                            # Always process the function call to capture the generated SQL.
+                                text_in_this_turn += part.text
                             if hasattr(part, 'function_call') and part.function_call:
                                 raw_sql = part.function_call.args.get('sql_query')
-                                if raw_sql: kpi_data["generated_sql"] = ' '.join(line.strip() for line in raw_sql.splitlines())
-            
+                                if raw_sql:
+                                    sql_in_this_turn = ' '.join(line.strip() for line in raw_sql.splitlines())
+                                    kpi_data["generated_sql"] = sql_in_this_turn
+
+                        # Always add all text to our internal log variable for KPI purposes.
+                        if text_in_this_turn:
+                            llm_response_text += text_in_this_turn
+                        
+                        # Step 2: Decide what to add to the user-facing response.
+                        if sql_in_this_turn:
+                            # If there's SQL, this is a tool-using turn. Display ONLY the SQL.
+                            formatted_sql = f"```sql\n{sql_in_this_turn}\n```"
+                            final_response_parts.append({"role": "model", "content": formatted_sql})
+                        elif text_in_this_turn:
+                            # If there is NO SQL in this turn, it must be the final text answer. Display it.
+                            final_response_parts.append({"role": "model", "content": text_in_this_turn})
+
             kpi_data["clarification_asked"] = True if kpi_data["generated_sql"] == "N/A" and llm_response_text else False
-            
+            logging.info(f"======> [CHAT_NEW_REQUEST_ENDS] from user '{user_id}' : {final_response_parts}")
             return jsonify({"session_id": session_id, "messages": final_response_parts}), 200
 
         except Exception as e:
@@ -189,7 +195,6 @@ def create_app():
             return jsonify({"session_id": session_id or "", "messages": [], "error": f"Internal server error: {str(e)}"}), 500
         finally:
             # --- OPTIMIZATION: The detailed KPI logging block below is disabled for performance. ---
-            # It requires an extra database read and slows down the request-response cycle.
             """
             kpi_data["total_request_time"] = f"{time.time() - start_time:.2f}s"
             
