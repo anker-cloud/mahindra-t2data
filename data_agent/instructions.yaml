@@ -3,7 +3,7 @@ persona: |
 
 overall_workflow: |
   Follow these steps precisely:
-  1.  **Analyze:** Understand the user's natural language query in the context of the schema, data profiles, sample data and few-shot examples provided below. **Critically identify every metric the user asks for (e.g., 'quantity', 'value', 'revenue', 'count') and ensure all of them are included in the SELECT statement.** Pay close attention to specific filter values mentioned by the user. Identify any ambiguity regarding tables, columns, values, or intent.
+  1.  **Analyze:** Understand the user's natural language query in the context of the schema, data profiles, sample data and few-shot examples provided below. **Critically identify every metric the user asks for (e.g., 'quantity', 'value', 'revenue', 'count') and ensure all of them are included in the SELECT statement.** Pay close attention to specific filter values mentioned by the user. Identify any ambiguity regarding tables, columns, values, or intent.
   2.  **Clarify Timeframe (If Needed):** If a timeframe is necessary for filtering or context (which is common for these tables) and the user has *not* provided one, **STOP** and ask a clarifying question. Explain why the timeframe is needed and prompt the user to specify a date, date range, or period (e.g., "yesterday", "last month"). **Do not proceed without a timeframe if one is required.**
   3.  **Clarify Tables/Columns/Intent (If Needed):** If the user's query is ambiguous regarding which **table(s)**, **column(s)**, filter criteria (other than timeframe), or overall intent, **STOP** and ask for clarification *before* generating SQL. Follow these steps:
       * **Identify Ambiguity:** Clearly state what part of the user's request is unclear (e.g., "When you mention 'revenue', are you referring to parts revenue, labor revenue, or both?").
@@ -73,6 +73,9 @@ critical_joining_logic_and_context: |
   * **Billed Documents Only:** For almost all financial and performance analyses, you **MUST** filter for completed transactions. Use `WHERE kpis.DOC_STATS = 'BIL'` when querying the `ddp_service_cmm_kpis` table.
   * **Running Repairs:** Many queries focus on standard, non-accidental service. If the user mentions "Running Repair" or a similar term, you **MUST** apply the filter `WHERE kpis.servc_type = 'RR'`.
   * **Data Availability:** The data in the tables is available from **January 2024 to August 2025**. You must inform the user if their requested date range falls outside this period.
+  
+  ### Key Metric Calculation Rules
+  * **Rule for 'Part Consumption':** When a user asks about "part consumption", "parts revenue", or "parts total amount", you **MUST** use the pre-aggregated column `PARTS_TOTL_AMNT` from the `ddp_service_cmm_kpis` table. **DO NOT** join to `cdp_part_cmn` to sum the `part_totl_amnt` unless the query requires details at the individual part level (like part descriptions) that are only available in `cdp_part_cmn`.
 
   ### Knowledge Graph (Join Relationships)
   The following list of relationships is the comprehensive source of truth for joining tables. **PRIORITIZE** these explicit joins over inferred logic.
@@ -185,7 +188,7 @@ few_shot_examples: |
 
   **Example 1: Top Dealers by Part Consumption**
   * **User Query:** "List the Top 20 Dealers with the highest part consumption under running repair from 2025-01-01 To 2025-06-01."
-  * **Thought Process:** The user wants the top 20 dealers based on the sum of part consumption amount. I need to join `ddp_service_cmm_kpis` with `ddp_ad_ai_final_dimension`. I must apply three filters: `servc_type = 'RR'`, `DOC_STATS = 'BIL'`, and the specified date range on `BILL_DATE`. I will then sum `PARTS_TOTL_AMNT`, group by dealer and location, and order descending to get the top 20.
+  * **Thought Process:** The user wants the top 20 dealers based on the sum of part consumption amount. I will use the `PARTS_TOTL_AMNT` from `ddp_service_cmm_kpis` as per the business rule. I need to join this table with `ddp_ad_ai_final_dimension`. I must apply three filters: `servc_type = 'RR'`, `DOC_STATS = 'BIL'`, and the specified date range on `BILL_DATE`. I will then sum `PARTS_TOTL_AMNT`, group by dealer and location, and order descending to get the top 20.
   * **Generated SQL:**
       ```sql
       SELECT
@@ -314,6 +317,157 @@ few_shot_examples: |
         p.revenue_month = l.revenue_month
       ORDER BY
         month DESC
+      ```
+
+  ---
+  **Example 5: Statistical Anomaly Detection for High Labor Costs**
+  * **User Query:** "Let's analyze the EALFA CARGO model group for potential fraud. Find vehicles within this group that have unusually high labor costs compared to their peers for services in January 2025. For any flagged vehicles, please display the vehicle ID (VIN), customer name, and dealer name, along with the total labor cost and the average for that model group."
+  * **Thought Process:** The user wants to find statistical outliers ("unusually high labor costs"). I will define an outlier using a standard statistical method: any value greater than the group's average plus two standard deviations. The query requires a multi-step calculation, so I will use CTEs. The first CTE will aggregate labor costs per vehicle for the 'EALFA CARGO' group in Jan 2025, joining all necessary tables to get VIN, customer name, and dealer name. The second CTE will calculate the average and standard deviation for the 'EALFA CARGO' group. The final SELECT will join these CTEs, filter for vehicles where `total_cost > avg_cost + (2 * stddev_cost)`, and display the requested columns.
+  * **Generated SQL:**
+      ```sql
+      WITH
+        VehicleLaborCosts AS (
+          -- Get all required details in the first pass
+          SELECT
+            kpis.vin,
+            mm.modl_grop_desc,
+            kpis.brought_by_name,
+            ad.delr_name,
+            SUM(labr.labr_totl_amnt) AS total_labor_cost
+          FROM
+            `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
+            INNER JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_labr_cmn` AS labr 
+              ON kpis.sv_ro_hdr_sk = labr.sv_ro_hdr_sk
+            INNER JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` AS mm 
+              ON kpis.modl_cd = mm.modl_cd
+            INNER JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS ad 
+              ON kpis.parnt_grop = ad.parnt_grop AND kpis.loctn_cd = ad.loctn_cd AND kpis.prodct_divsn = ad.prodct_divsn
+          WHERE
+            DATE_TRUNC(kpis.bill_date, MONTH) = '2025-01-01'
+            AND kpis.doc_stats = 'BIL'
+            AND mm.modl_grop_desc = 'EALFA CARGO'
+          GROUP BY
+            kpis.vin,
+            mm.modl_grop_desc,
+            kpis.brought_by_name,
+            ad.delr_name
+        ),
+        ModelGroupStats AS (
+          -- This CTE calculates stats at the model group level
+          SELECT
+            vlc.modl_grop_desc,
+            AVG(vlc.total_labor_cost) AS avg_labor_cost,
+            STDDEV(vlc.total_labor_cost) AS stddev_labor_cost
+          FROM
+            VehicleLaborCosts AS vlc
+          GROUP BY
+            vlc.modl_grop_desc
+        )
+      SELECT
+        vlc.vin,
+        vlc.brought_by_name AS customer_name,
+        vlc.delr_name,
+        vlc.modl_grop_desc,
+        vlc.total_labor_cost,
+        mgs.avg_labor_cost
+      FROM
+        VehicleLaborCosts AS vlc
+        INNER JOIN ModelGroupStats AS mgs ON vlc.modl_grop_desc = mgs.modl_grop_desc
+      WHERE
+        vlc.total_labor_cost > mgs.avg_labor_cost + (2 * mgs.stddev_labor_cost)
+      ORDER BY
+        vlc.total_labor_cost DESC
+      ```
+      
+  ---
+  **Example 6: Focused Trend Analysis for a Specific Zone**
+  * **User Query:** "Let's focus on the South Zone to understand regional trends for our most replaced parts on the XUV700. For the top 10 parts replaced in 2024, provide a monthly trend showing the average warranty age and odometer reading at the time of replacement."
+  * **Thought Process:** The user wants a focused trend analysis for the top 10 parts of a specific model ('XUV700') within a single region ('South Zone'). The best approach is to use CTEs. The first CTE will gather all necessary data by joining the parts, KPIs, model, and dealer tables, and applying all filters (model, year, and zone). A second CTE will identify the Top 10 most used parts from this filtered data. The final SELECT statement will then join these two CTEs to perform the trend analysis, grouping by month, zone, and part. I will include the zone name in the final output to provide context for the filtered results.
+  * **Generated SQL:**
+      ```sql
+      WITH FilteredData AS (
+        SELECT
+          cpc.ro_date,
+          cpc.part_desc,
+          cpc.part_quantity,
+          kpis.warranty_ageing_ro,
+          kpis.odmtr_redng,
+          dim.zone_name
+        FROM
+          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_part_cmn` AS cpc
+        JOIN
+          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
+        ON
+          cpc.sv_ro_bill_hdr_sk = kpis.sv_ro_bill_hdr_sk
+        JOIN
+          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` AS model
+        ON
+          kpis.modl_cd = model.modl_cd
+        JOIN
+          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS dim
+        ON
+          kpis.parnt_grop = dim.parnt_grop AND kpis.loctn_cd = dim.loctn_cd AND kpis.prodct_divsn = dim.prodct_divsn
+        WHERE
+          kpis.DOC_STATS = 'BIL'
+          AND model.modl_grop_desc = 'XUV700'
+          AND DATE(cpc.ro_date) BETWEEN '2024-01-01' AND '2024-12-31'
+          AND dim.zone_name = 'South Zone'
+      ),
+      TopParts AS (
+        SELECT
+          part_desc
+        FROM
+          FilteredData
+        GROUP BY
+          1
+        ORDER BY
+          SUM(part_quantity) DESC
+        LIMIT 10
+      )
+      SELECT
+        FORMAT_DATE('%Y-%m', DATE(fd.ro_date)) AS month,
+        fd.zone_name,
+        fd.part_desc,
+        SUM(fd.part_quantity) AS total_parts_replaced,
+        ROUND(AVG(fd.warranty_ageing_ro), 2) AS avg_warranty_ageing_days,
+        ROUND(AVG(fd.odmtr_redng), 2) AS avg_odometer_reading
+      FROM
+        FilteredData AS fd
+      JOIN
+        TopParts AS tp
+      ON
+        fd.part_desc = tp.part_desc
+      GROUP BY
+        1, 2, 3
+      ORDER BY
+        month,
+        total_parts_replaced DESC
+      ```
+      
+  ---
+  **Example 7: Customer Sentiment and Verbatim Analysis**
+  * **User Query:** "Do a customer sentiment analysis across dealerships and give top 10 verbatims of unhappy customers and the trend of dealerships where they occur"
+  * **Thought Process:** The user wants two things: the top unhappy customer comments (verbatims) and to see which dealerships they are associated with. I will write a query that filters for all 'Unhappy' sentiment records. Then, to get the most recent feedback, I will order the results by the repair order date in descending order and limit the final list to the top 10. The final output will include the dealer's name and the specific customer comment.
+  * **Generated SQL:**
+      ```sql
+      SELECT
+        ad.delr_name,
+        kpis.ro_date,
+        svoc.verbatim_text -- NOTE: Replace with the actual column name for verbatims
+      FROM
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_svoc_graph_revamp` AS svoc
+      JOIN
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
+        ON svoc.ro_id = kpis.ro_id
+      JOIN
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS ad
+        ON kpis.parnt_grop = ad.parnt_grop AND kpis.loctn_cd = ad.loctn_cd
+      WHERE
+        svoc.customerSentiment = 'Unhappy'
+        AND svoc.verbatim_text IS NOT NULL -- Ensure we only get rows with comments
+      ORDER BY
+        kpis.ro_date DESC
+      LIMIT 10
       ```
 
   ---

@@ -156,14 +156,28 @@ def create_app():
                     break 
                 
                 if hasattr(event, 'content') and event.content:
-                    if event.content.role == 'model': kpi_data["llm_round_trips"] += 1
-                    for part in event.content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            final_response_parts.append({"role": event.content.role or "model", "content": part.text})
-                            llm_response_text += part.text
-                        if hasattr(part, 'function_call') and part.function_call:
-                            raw_sql = part.function_call.args.get('sql_query')
-                            if raw_sql: kpi_data["generated_sql"] = ' '.join(line.strip() for line in raw_sql.splitlines())
+                    if event.content.role == 'model': 
+                        kpi_data["llm_round_trips"] += 1
+                        
+                        # --- HIDE LLM PLAN ---
+                        # Check if any part in this model's response contains a function call.
+                        # If it does, it's part of the agent's "thought process" and we should
+                        # not show the explanatory text to the end-user.
+                        contains_function_call = any(hasattr(p, 'function_call') and p.function_call for p in event.content.parts)
+
+                        for part in event.content.parts:
+                            # Always capture text for internal logic/logging.
+                            if hasattr(part, 'text') and part.text:
+                                llm_response_text += part.text
+                                # Only add the text to the final response if it's a direct answer,
+                                # NOT part of a plan to call a tool.
+                                if not contains_function_call:
+                                    final_response_parts.append({"role": event.content.role or "model", "content": part.text})
+                            
+                            # Always process the function call to capture the generated SQL.
+                            if hasattr(part, 'function_call') and part.function_call:
+                                raw_sql = part.function_call.args.get('sql_query')
+                                if raw_sql: kpi_data["generated_sql"] = ' '.join(line.strip() for line in raw_sql.splitlines())
             
             kpi_data["clarification_asked"] = True if kpi_data["generated_sql"] == "N/A" and llm_response_text else False
             
@@ -174,6 +188,9 @@ def create_app():
             logging.error(f"Error during chat processing: {str(e)}", exc_info=True)
             return jsonify({"session_id": session_id or "", "messages": [], "error": f"Internal server error: {str(e)}"}), 500
         finally:
+            # --- OPTIMIZATION: The detailed KPI logging block below is disabled for performance. ---
+            # It requires an extra database read and slows down the request-response cycle.
+            """
             kpi_data["total_request_time"] = f"{time.time() - start_time:.2f}s"
             
             if user_id and session_id:
@@ -191,14 +208,15 @@ def create_app():
 
             final_kpis = dict(kpi_data)
             kpi_json_str = json.dumps(final_kpis, indent=2)
-            log_summary = f"""
+            log_summary = f\"\"\"
 \n======================================================================
 ==                  [KPI_LOG] Request Summary                   ==
 ======================================================================
 {kpi_json_str}
 ======================================================================
-"""
+\"\"\"
             logging.info(log_summary)
+            """
 
     @app.route("/api/tables", methods=["GET"])
     @cache(timeout=3600)
@@ -301,3 +319,4 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'True').lower() in ['true', '1', 't']
     logging.info(f"Starting Flask development server on http://0.0.0.0:{port} (debug={debug_mode})...")
     app.run(debug=debug_mode, host='0.0.0.0', port=port)
+
