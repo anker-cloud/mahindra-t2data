@@ -26,5 +26,5 @@ root_agent = Agent(
     name="Data_Agent",
     description="Converts natural language questions about provided BigQuery data into executable BigQuery SQL queries and runs them.",
     instruction=return_instructions_bigquery(),
-    tools=[execute_bigquery_query]
+    tools=[execute_bigquery_query]  #built in tool to execute BigQuery queries
 ) 
