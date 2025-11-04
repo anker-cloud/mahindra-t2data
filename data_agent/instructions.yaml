@@ -65,35 +65,48 @@ table_schema_and_join_information: |
 critical_joining_logic_and_context: |
   ### CRITICAL BUSINESS CONTEXT & LOGIC
 
-  **Dataset Description:** The dataset captures data products related to Mahindra's **Service Lifecycle** (Repair Order, Parts, Labor, Warranty) and **Sales Funnel** (Enquiry, Booking, Retail, Stock, Billing).
+  **Dataset Description:** The dataset captures data products related to Mahindra's **Service Lifecycle** (Repair Order, Parts, Labor, Warranty), **Sales Funnel** (Enquiry, Booking, Retail, Stock, Billing), and **Customer Voice/Verbatim** analysis.
 
-  ### New Tables Added for Sales/Billing/Stock
+  ### New Tables Added for VOC and Detailed Service
+  * **`Ro_voc_labr`**: Detailed Labor costs and service metadata integrated with VOC categorization. Use for local labor, Maxicare.
+  * **`Ro_voc_part`**: Detailed Parts usage, costs, and service metadata integrated with VOC categorization. Use for local parts consumption.
+  * **`customer_ro_verbatim`**: **Customer Verbatim, TAT, and Revisit Logic.** Central table used for calculating Service TAT, Revisit/Rerepair counts, and grouping customer complaints.
+
+  ### Existing Sales/Stock Tables (for context)
   * **`EBRD_base`**: Core Sales Funnel (Enquiry, Booking, Retail, Delivery).
   * **`stg_mis_stock_hist`**: Vehicle Inventory/Stock History snapshot.
   * **`stg_sales_billing_metrics`**: Aggregated vehicle billing and sales performance metrics.
   * **`dim_zapo_matcategory`**: Dimension for material/model category and color mapping.
 
   ### Key Business Rules & Filters
-  * **Service Billed Documents:** For service analyses, filter `ddp_service_cmm_kpis` using `WHERE kpis.DOC_STATS = 'BIL'`.
+  * **Service Billed Documents:** For financial/performance analyses, filter `ddp_service_cmm_kpis` using `WHERE kpis.DOC_STATS = 'BIL'`.
+  * **Running Repairs (RR):** For Revisit/Repeat Repair analysis, often filter for running repairs using `voc_category = 'RR'` or `servc_type = 'RR'`.
   * **Sales Invoice Type:** Retail and Billing counts in sales tables use `invoice_type = 'CI'` (Customer Invoice).
   * **Stock Snapshot Date:** Stock queries **MUST** filter using the exact `trans_date` (e.g., `DATE(trans_date) = '2025-10-31'`) for snapshot accuracy.
+  * **Service TAT:** Calculate Average Turnaround Time (TAT) using `AVG(TIMESTAMP_DIFF(bill_date, ro_date, DAY))` on the `customer_ro_verbatim` table.
   * **Retail Net Count Logic:** Calculated as: `COUNT(Invoices) - COUNT(Cancellations)` using conditional counting on `EBRD_base`.
-  * **Open Booking Count Logic:** Use the complex conditional logic (`BOOKING_DATE < start_date` AND related cancellation/invoice dates are null or outside the period) as shown in Example 12.
-
-  ### Key Metric Calculation Rules
-  * **Part Consumption (Service):** Use the pre-aggregated column `PARTS_TOTL_AMNT` from `ddp_service_cmm_kpis`.
   * **Dealer Inventory (Stock):** Net inventory is calculated as `SUM(close_stk) - SUM(invc_nt_dlv)`.
   * **Billing Count:** Calculated by summing the `billing_count` column from `stg_sales_billing_metrics`.
-  
+
   ### Knowledge Graph (Join Relationships)
   The following list of relationships is the comprehensive source of truth for joining tables. **PRIORITIZE** these explicit joins over inferred logic.
+
+  # --- ADDED VOC/DETAILED SERVICE JOINS  ---
+  - **[VOC Labor/Part Core]** `Ro_voc_part` joins with `Ro_voc_labr` on `Ro_voc_part.sv_ro_bill_hdr_sk = Ro_voc_labr.sv_ro_bill_hdr_sk`.
+  - **[VOC to Verbatim]** `customer_ro_verbatim` joins with `Ro_voc_labr` on `customer_ro_verbatim.sv_ro_hdr_sk = Ro_voc_labr.sv_ro_hdr_sk`.
+  - **[VOC to Verbatim]** `customer_ro_verbatim` joins with `Ro_voc_part` on `customer_ro_verbatim.sv_ro_hdr_sk = Ro_voc_part.sv_ro_hdr_sk`.
+  - **[VOC Part to Dimension]** `Ro_voc_part` joins with `ddp_ad_ai_final_dimension` on `Ro_voc_part.dealer_code = ddp_ad_ai_final_dimension.delr_cd`.
+  - **[Verbatim to Dimension]** `customer_ro_verbatim` joins with `ddp_ad_ai_final_dimension` on `customer_ro_verbatim.dealer_code = ddp_ad_ai_final_dimension.delr_cd`.
+  - **[Service Link]** `Ro_voc_labr` joins with `ddp_service_cmm_kpis` on `Ro_voc_labr.sv_ro_hdr_sk = ddp_service_cmm_kpis.sv_ro_hdr_sk`.
+  - **[Service Link]** `Ro_voc_part` joins with `ddp_service_cmm_kpis` on `Ro_voc_part.sv_ro_hdr_sk = ddp_service_cmm_kpis.sv_ro_hdr_sk`.
+  # --- ADDED SALES/STOCK JOINS  ---
   - **[Sales Funnel]** `EBRD_base` joins with `ddp_dim_srv_mst_model_master` on `EBRD_base.Enquiry_model_code = ddp_dim_srv_mst_model_master.modl_cd`.
   - **[Sales Funnel]** `EBRD_base` joins with `ddp_ad_ai_final_dimension` on `EBRD_base.link_dealer = CONCAT(ddp_ad_ai_final_dimension.parnt_grop, ddp_ad_ai_final_dimension.loctn_cd, ddp_ad_ai_final_dimension.prodct_divsn)`.
   - **[Stock]** `stg_mis_stock_hist` joins with `ddp_dim_srv_mst_model_master` on `stg_mis_stock_hist.modl_cd = ddp_dim_srv_mst_model_master.modl_cd`.
   - **[Stock/Dimension]** `stg_mis_stock_hist` joins with `ddp_ad_ai_final_dimension` on `stg_mis_stock_hist.div_key = CONCAT(ddp_ad_ai_final_dimension.parnt_grop, ddp_ad_ai_final_dimension.loctn_cd, ddp_ad_ai_final_dimension.prodct_divsn)`.
-  - **[Stock/Dimension]** `stg_mis_stock_hist` joins with `dim_zapo_matcategory` on `stg_mis_stock_hist.oem_modl_cd = dim_zapo_matcategory.matnr` AND `stg_mis_stock_hist.colr_cd = dim_zapo_matcategory.charg`.
   - **[Billing/Dimension]** `stg_sales_billing_metrics` joins with `ddp_ad_ai_final_dimension` on `stg_sales_billing_metrics.parnt_grop = ddp_ad_ai_final_dimension.parnt_grop` AND `stg_sales_billing_metrics.loctn_cd = ddp_ad_ai_final_dimension.loctn_cd` AND `stg_sales_billing_metrics.prodct_divsn = ddp_ad_ai_final_dimension.prodct_divsn`.
   - **[Billing/Dimension]** `stg_sales_billing_metrics` joins with `dim_zapo_matcategory` on `stg_sales_billing_metrics.oem_modl_cd = dim_zapo_matcategory.matnr` AND `stg_sales_billing_metrics.colr_cd = dim_zapo_matcategory.charg`.
+  # --- ORIGINAL SERVICE JOINS  ---
   - `cdp_part_cmn` joins with `ddp_service_cmm_kpis` on `cdp_part_cmn.sv_ro_bill_hdr_sk = ddp_service_cmm_kpis.sv_ro_bill_hdr_sk`
   - `cdp_part_cmn` joins with `ddp_service_cmm_kpis` on `cdp_part_cmn.loctn_cd = ddp_service_cmm_kpis.loctn_cd`
   - `cdp_labr_cmn` joins with `ddp_ad_ai_final_dimension` on `cdp_labr_cmn.loctn_cd = ddp_ad_ai_final_dimension.loctn_cd`
@@ -198,27 +211,45 @@ usecase_specific_table_information: |
   * **Granularity:** Each row is a unique vehicle model (`modl_cd`).
 
   ---
-  **Table: `EBRD_base` (NEW)**
+  **Table: `EBRD_base` (Sales Funnel)**
   * **Description:** **Core Sales Funnel Table.** Contains transactional data for Enquiries, Test Drives, Bookings, Retail, and Delivery events. Used for funnel analysis.
   * **Date Identifier:** `Enquiry_date`, `booking_date`, `invoice_date`, `delivery_note_date`.
   * **Granularity:** Each row represents a sales funnel event.
 
   ---
-  **Table: `stg_mis_stock_hist` (NEW)**
+  **Table: `stg_mis_stock_hist` (Stock)**
   * **Description:** Vehicle inventory and stock history snapshot across the dealer network. Used for aging analysis and calculating available stock.
   * **Date Identifier:** `trans_date` (Date of stock snapshot).
   * **Granularity:** Daily stock snapshot.
 
   ---
-  **Table: `stg_sales_billing_metrics` (NEW)**
+  **Table: `stg_sales_billing_metrics` (Billing)**
   * **Description:** Aggregated metrics for vehicle billing and sales performance.
   * **Date Identifier:** `billing_date`.
   * **Granularity:** Billing transaction level.
 
   ---
-  **Table: `dim_zapo_matcategory` (NEW)**
+  **Table: `dim_zapo_matcategory` (Dimension)**
   * **Description:** Dimension for material/model category and color mapping.
   * **Granularity:** Unique material/color combination.
+
+  ---
+  **Table: `Ro_voc_labr` (NEW)**
+  * **Description:** **Labor Details (VOC Context).** Contains detailed labor operations, service metadata, and labor amounts (`labr_totl_amnt`) linked to VOC categorization. Use for local labor, Maxicare.
+  * **Date Identifier:** `ro_date`, `bill_date` (TIMESTAMP).
+  * **Granularity:** Individual labor operation line item.
+
+  ---
+  **Table: `Ro_voc_part` (NEW)**
+  * **Description:** **Parts Details (VOC Context).** Contains detailed part usage, costs, and service metadata linked to VOC categorization. Use for local parts consumption.
+  * **Date Identifier:** `ro_date`, `bill_date` (TIMESTAMP).
+  * **Granularity:** Individual part line item.
+
+  ---
+  **Table: `customer_ro_verbatim` (NEW)**
+  * **Description:** **Customer Verbatim, TAT, and Revisit Logic.** Central table used for calculating metrics like Service TAT, Revisit/Rerepair counts, and grouping customer complaints.
+  * **Date Identifier:** `ro_date`, `bill_date` (TIMESTAMP).
+  * **Granularity:** Repair order event level.
 
 few_shot_examples: |
   ---
@@ -422,34 +453,34 @@ few_shot_examples: |
   * **User Query:** "Let's focus on the South Zone to understand regional trends for our most replaced parts on the XUV700. For the top 10 parts replaced in 2024, provide a monthly trend showing the average warranty age and odometer reading at the time of replacement."
   * **Thought Process:** The user wants a focused trend analysis for the top 10 parts of a specific model ('XUV700') within a single region ('South Zone'). The best approach is to use CTEs. The first CTE will gather all necessary data by joining the parts, KPIs, model, and dealer tables, and applying all filters (model, year, and zone). A second CTE will identify the Top 10 most used parts from this filtered data. The final SELECT statement will then join these two CTEs to perform the trend analysis, grouping by month, zone, and part. I will include the zone name in the final output to provide context for the filtered results.
   * **Generated SQL:**
-      ```sql
-      WITH FilteredData AS (
-        SELECT
-          cpc.ro_date,
-          cpc.part_desc,
-          cpc.part_quantity,
-          kpis.warranty_ageing_ro,
-          kpis.odmtr_redng,
-          dim.zone_name
-        FROM
-          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_part_cmn` AS cpc
-        JOIN
-          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
-        ON
-          cpc.sv_ro_bill_hdr_sk = kpis.sv_ro_bill_hdr_sk
-        JOIN
-          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` AS model
-        ON
-          kpis.modl_cd = model.modl_cd
-        JOIN
-          `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS dim
-        ON
-          kpis.parnt_grop = dim.parnt_grop AND kpis.loctn_cd = dim.loctn_cd AND kpis.prodct_divsn = dim.prodct_divsn
-        WHERE
-          kpis.DOC_STATS = 'BIL'
-          AND model.modl_grop_desc = 'XUV700'
-          AND DATE(cpc.ro_date) BETWEEN '2024-01-01' AND '2024-12-31'
-          AND dim.zone_name = 'South Zone'
+    ```sql
+    WITH FilteredData AS (
+      SELECT
+        cpc.ro_date,
+        cpc.part_desc,
+        cpc.part_quantity,
+        kpis.warranty_ageing_ro,
+        kpis.odmtr_redng,
+        dim.zone_name
+      FROM
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_part_cmn` AS cpc
+      JOIN
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
+      ON
+        cpc.sv_ro_bill_hdr_sk = kpis.sv_ro_bill_hdr_sk
+      JOIN
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` AS model
+      ON
+        kpis.modl_cd = model.modl_cd
+      JOIN
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS dim
+      ON
+        kpis.parnt_grop = dim.parnt_grop AND kpis.loctn_cd = dim.loctn_cd AND kpis.prodct_divsn = dim.prodct_divsn
+      WHERE
+        kpis.DOC_STATS = 'BIL'
+        AND model.modl_grop_desc = 'XUV700'
+        AND DATE(cpc.ro_date) BETWEEN '2024-01-01' AND '2024-12-31'
+        AND dim.zone_name = 'South Zone'
       ),
       TopParts AS (
         SELECT
@@ -462,178 +493,397 @@ few_shot_examples: |
           SUM(part_quantity) DESC
         LIMIT 10
       )
-      SELECT
-        FORMAT_DATE('%Y-%m', DATE(fd.ro_date)) AS month,
-        fd.zone_name,
-        fd.part_desc,
-        SUM(fd.part_quantity) AS total_parts_replaced,
-        ROUND(AVG(fd.warranty_ageing_ro), 2) AS avg_warranty_ageing_days,
-        ROUND(AVG(fd.odmtr_redng), 2) AS avg_odometer_reading
-      FROM
-        FilteredData AS fd
-      JOIN
-        TopParts AS tp
-      ON
-        fd.part_desc = tp.part_desc
-      GROUP BY
-        1, 2, 3
-      ORDER BY
-        month,
-        total_parts_replaced DESC
-      ```
-      
+    SELECT
+      FORMAT_DATE('%Y-%m', DATE(fd.ro_date)) AS month,
+      fd.zone_name,
+      fd.part_desc,
+      SUM(fd.part_quantity) AS total_parts_replaced,
+      ROUND(AVG(fd.warranty_ageing_ro), 2) AS avg_warranty_ageing_days,
+      ROUND(AVG(fd.odmtr_redng), 2) AS avg_odometer_reading
+    FROM
+      FilteredData AS fd
+    JOIN
+      TopParts AS tp
+    ON
+      fd.part_desc = tp.part_desc
+    GROUP BY
+      1, 2, 3
+    ORDER BY
+      month,
+      total_parts_replaced DESC
+    ```
+    
   ---
   **Example 7: Customer Sentiment and Verbatim Analysis**
   * **User Query:** "Do a customer sentiment analysis across dealerships and give top 10 verbatims of unhappy customers and the trend of dealerships where they occur"
   * **Thought Process:** The user wants two things: the top unhappy customer comments (verbatims) and to see which dealerships they are associated with. I will write a query that filters for all 'Unhappy' sentiment records. Then, to get the most recent feedback, I will order the results by the repair order date in descending order and limit the final list to the top 10. The final output will include the dealer's name and the specific customer comment.
   * **Generated SQL:**
-      ```sql
-      SELECT
-        ad.delr_name,
-        kpis.ro_date,
-        svoc.verbatim_text -- NOTE: Replace with the actual column name for verbatims
-      FROM
-        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_svoc_graph_revamp` AS svoc
-      JOIN
-        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
-        ON svoc.ro_id = kpis.ro_id
-      JOIN
-        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS ad
-        ON kpis.parnt_grop = ad.parnt_grop AND kpis.loctn_cd = ad.loctn_cd
-      WHERE
-        svoc.customerSentiment = 'Unhappy'
-        AND svoc.verbatim_text IS NOT NULL -- Ensure we only get rows with comments
-      ORDER BY
-        kpis.ro_date DESC
-      LIMIT 10
-      ```
+    ```sql
+    SELECT
+      ad.delr_name,
+      kpis.ro_date,
+      svoc.verbatim_text -- NOTE: Replace with the actual column name for verbatims
+    FROM
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.cdp_svoc_graph_revamp` AS svoc
+    JOIN
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_service_cmm_kpis` AS kpis
+      ON svoc.ro_id = kpis.ro_id
+    JOIN
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` AS ad
+      ON kpis.parnt_grop = ad.parnt_grop AND kpis.loctn_cd = ad.loctn_cd
+    WHERE
+      svoc.customerSentiment = 'Unhappy'
+      AND svoc.verbatim_text IS NOT NULL -- Ensure we only get rows with comments
+    ORDER BY
+      kpis.ro_date DESC
+    LIMIT 10
+    ```
 
   ---
   **Example 8: Enquiry & Test Drive Metrics (NEW)**
   * **User Query:** "Measure our total customer enquiries and test drives, segmented by customer occupation, for October 2025."
   * **Thought Process:** The user needs total counts and segmented counts based on the `EBRD_base` table. I must use conditional counting (`COUNT(DISTINCT CASE WHEN ...)`) to segment by occupation (7=Business, 48/49=Salaried, 54=Self-Employed) and gender, and filter by the requested date range on `Enquiry_date` and `test_drive_date`.
   * **Generated SQL:**
-      ```sql
-      SELECT 
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' then enquiry_sk else null end) as enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code = '7' then enquiry_sk else null end) as occupation_business_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code in ('48' , '49') then enquiry_sk else null end) as occupation_salaried_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code = '54' then enquiry_sk else null end) as occupation_self_employeed_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code not in  ('48' , '49' , '7' , '54')  then enquiry_sk else null end) as occupation_other_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender = 'M' then enquiry_sk else null end) as male_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender = 'F' then enquiry_sk else null end) as female_enquiry_count,
-      count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender  not in ('F', 'M') then enquiry_sk else null end) as other_gender_enquiry_count,
-      count( distinct case when test_drive_date between '2025-10-01' and '2025-10-31' then Test_drive_sk else null end) as td_count
-      FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
-      ON a.Enquiry_model_code = modl.modl_cd
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
-      ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
-      ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
-      ```
+    ```sql
+    SELECT 
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' then enquiry_sk else null end) as enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code = '7' then enquiry_sk else null end) as occupation_business_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code in ('48' , '49') then enquiry_sk else null end) as occupation_salaried_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code = '54' then enquiry_sk else null end) as occupation_self_employeed_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_occupation_code not in  ('48' , '49' , '7' , '54')  then enquiry_sk else null end) as occupation_other_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender = 'M' then enquiry_sk else null end) as male_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender = 'F' then enquiry_sk else null end) as female_enquiry_count,
+    count( distinct case when Enquiry_date between '2025-10-01' and '2025-10-31' and enquiry_gender  not in ('F', 'M') then enquiry_sk else null end) as other_gender_enquiry_count,
+    count( distinct case when test_drive_date between '2025-10-01' and '2025-10-31' then Test_drive_sk else null end) as td_count
+    FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
+    ON a.Enquiry_model_code = modl.modl_cd
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
+    ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
+    ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
+    ```
 
   ---
   **Example 9: Stock Inventory Snapshot (NEW)**
   * **User Query:** "Provide a snapshot of dealer inventory, free stock, and aging stock analysis for the end of October 2025."
   * **Thought Process:** The user requires a stock aggregation from the `stg_mis_stock_hist` table, filtering for the specific snapshot date ('2025-10-31'). The query must use the formulas for calculating net inventory (e.g., `dealer_inventory = close_stk - invc_nt_dlv`) and sum the various aging buckets.
   * **Generated SQL:**
-      ```sql
-      SELECT 
-      sum(close_stk) - sum(invc_nt_dlv) AS dealer_inventory,
-      sum(phy_close_stk) - sum(phy_ibnd_close_stk) AS physical_inventory,
-      sum(trn_close_stk) - sum(trn_ibnd_close_stk) AS in_transit_inventory,
-      sum(allot_close_stk) AS alloted_stock,
-      sum(close_stk) - sum(invc_nt_dlv) - sum(allot_close_stk) AS free_stock,
-      sum(invc_nt_dlv) AS IBND_stock,
-      SUM(chas_0_7) AS `0_to_7_days_old_stock`,	
-      SUM(chas_8_15) AS `8_to_15_days_old_stock`,	
-      SUM(chas_16_30) AS `16_to_30_days_old_stock`,	
-      SUM(chas_31_60) AS `31_to_60_days_old_stock`,	
-      SUM(chas_61_90) AS `61_to_90_days_old_stock`,	
-      SUM(chas_91_180) AS `91_to_180_days_old_stock`,	
-      SUM(chas_181_365) AS `181_to_365_days_old_stock`,	
-      SUM(chas_gt_365) AS `greater_than_365_days_old_stock`	
-      FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.stg_mis_stock_hist` a
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
-      ON a.modl_cd = modl.modl_cd
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
-      ON a.div_key = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
-      ON a.oem_modl_cd = zapo.matnr AND a.colr_cd = zapo.charg
-      WHERE DATE(trans_date) = '2025-10-31'
-      ```
+    ```sql
+    SELECT 
+    sum(close_stk) - sum(invc_nt_dlv) AS dealer_inventory,
+    sum(phy_close_stk) - sum(phy_ibnd_close_stk) AS physical_inventory,
+    sum(trn_close_stk) - sum(trn_ibnd_close_stk) AS in_transit_inventory,
+    sum(allot_close_stk) AS alloted_stock,
+    sum(close_stk) - sum(invc_nt_dlv) - sum(allot_close_stk) AS free_stock,
+    sum(invc_nt_dlv) AS IBND_stock,
+    SUM(chas_0_7) AS `0_to_7_days_old_stock`,	
+    SUM(chas_8_15) AS `8_to_15_days_old_stock`,	
+    SUM(chas_16_30) AS `16_to_30_days_old_stock`,	
+    SUM(chas_31_60) AS `31_to_60_days_old_stock`,	
+    SUM(chas_61_90) AS `61_to_90_days_old_stock`,	
+    SUM(chas_91_180) AS `91_to_180_days_old_stock`,	
+    SUM(chas_181_365) AS `181_to_365_days_old_stock`,	
+    SUM(chas_gt_365) AS `greater_than_365_days_old_stock`	
+    FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.stg_mis_stock_hist` a
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
+    ON a.modl_cd = modl.modl_cd
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
+    ON a.div_key = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
+    ON a.oem_modl_cd = zapo.matnr AND a.colr_cd = zapo.charg
+    WHERE DATE(trans_date) = '2025-10-31'
+    ```
 
   ---
   **Example 10: Billing Count Metrics (NEW)**
   * **User Query:** "Show the total and dealer-specific billing counts for the period of October 2025."
   * **Thought Process:** The user needs aggregated billing metrics. I will use the `stg_sales_billing_metrics` table and sum the `billing_count`. I must join to the dimension tables to ensure the model knows how to segment if the user asks for more detail later, and filter by the required `billing_date` range.
   * **Generated SQL:**
-      ```sql
-      SELECT  
-      sum(billing_count) as all_billing_count , sum(billing_count) as dealer_billing_count  
-      FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.stg_sales_billing_metrics` a
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` b
-      ON a.oem_modl_cd = b.matnr and a.colr_cd = b.charg
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
-      ON a.oem_modl_cd = modl.oem_modl_cd and a.colr_cd = modl.colr_cd
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
-      ON a.parnt_grop = adai.parnt_grop and a.loctn_cd = adai.loctn_cd and a.prodct_divsn = adai.prodct_divsn
-      WHERE date(billing_date) BETWEEN '2025-10-01' AND '2025-10-31'
-      ```
+    ```sql
+    SELECT  
+    sum(billing_count) as all_billing_count , sum(billing_count) as dealer_billing_count  
+    FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.stg_sales_billing_metrics` a
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` b
+    ON a.oem_modl_cd = b.matnr and a.colr_cd = b.charg
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
+    ON a.oem_modl_cd = modl.oem_modl_cd and a.colr_cd = modl.colr_cd
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
+    ON a.parnt_grop = adai.parnt_grop and a.loctn_cd = adai.loctn_cd and a.prodct_divsn = adai.prodct_divsn
+    WHERE date(billing_date) BETWEEN '2025-10-01' AND '2025-10-31'
+    ```
 
   ---
   **Example 11: Retail Sales Funnel Metrics (NEW)**
   * **User Query:** "Show the net retail count, purchase type segmentation, and average lifecycle days (retail to booking, retail to enquiry) for October 2025."
   * **Thought Process:** The user needs many segmented metrics from `EBRD_base`. I must use conditional counting and subtraction (`invoice_date - invoice_cancel_date`) for net counts, segment by `Purchase_Type` and `invoice_customer_type`, and use `DATE_DIFF` to calculate average lifecycle days, filtering all based on the invoice/delivery date range.
   * **Generated SQL:**
-      ```sql
-      SELECT 
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then invoice_sk else null end) AS retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Exchange buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Exchange buy' then invoice_sk else null end) AS exchange_buy_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'First Time Buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'First Time Buy' then invoice_sk else null end) AS First_Time_Buy_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Additional Buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Additional Buy' then invoice_sk else null end) AS Additional_Buy_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'IND' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'IND' then invoice_sk else null end) AS individual_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'CRP' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'CRP' then invoice_sk else null end) AS corporate_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'M' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'M' then invoice_sk else null end) AS male_gender_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'F' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'F' then invoice_sk else null end) AS female_gender_retail_count,
-      count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender not in ('F', 'M') then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender not in ('F', 'M') then invoice_sk else null end) AS other_gender_retail_count,
-      count( distinct case when invoice_date IS NOT NULL AND delivery_note_date IS NULL and invoice_type = 'CI'  then invoice_sk else null end) AS invoiced_but_not_delivered_ibnd,
-      count( distinct case when delivery_note_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then delivery_id else null end) AS delivery_count,
-      AVG(CASE WHEN invoice_date IS NOT NULL AND booking_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
-              THEN DATE_DIFF(invoice_date, booking_date, DAY) ELSE NULL END) AS avg_retail_to_booking_days,
-      AVG(CASE WHEN invoice_date IS NOT NULL AND enquiry_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
-              THEN DATE_DIFF(invoice_date, enquiry_date, DAY) ELSE NULL END) AS avg_retail_to_enquiry_days,
-      AVG(CASE WHEN invoice_date IS NOT NULL AND test_drive_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
-              THEN DATE_DIFF(invoice_date, test_drive_date, DAY) ELSE NULL END) AS avg_retail_to_testdrive_days,
-      AVG(CASE WHEN invoice_date IS NOT NULL AND billing_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
-              THEN DATE_DIFF(invoice_date, billing_date, DAY) ELSE NULL END) AS avg_retail_to_billing_days,
-      AVG(CASE WHEN invoice_date IS NOT NULL AND delivery_note_date IS NOT NULL and delivery_note_date between '2025-10-01' and '2025-10-31'
-              THEN DATE_DIFF(delivery_note_date, invoice_date, DAY) ELSE NULL END) AS avg_delivery_to_retail_days
-      FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
-      ON a.retail_modl_cd = modl.modl_cd
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
-      ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
-      ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
-      ```
+    ```sql
+    SELECT 
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then invoice_sk else null end) AS retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Exchange buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Exchange buy' then invoice_sk else null end) AS exchange_buy_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'First Time Buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'First Time Buy' then invoice_sk else null end) AS First_Time_Buy_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Additional Buy' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  Purchase_Type = 'Additional Buy' then invoice_sk else null end) AS Additional_Buy_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'IND' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'IND' then invoice_sk else null end) AS individual_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'CRP' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_type = 'CRP' then invoice_sk else null end) AS corporate_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'M' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'M' then invoice_sk else null end) AS male_gender_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'F' then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender = 'F' then invoice_sk else null end) AS female_gender_retail_count,
+    count( distinct case when invoice_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender not in ('F', 'M') then invoice_sk else null end)  - count( distinct case when invoice_cancel_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI' and  invoice_customer_gender not in ('F', 'M') then invoice_sk else null end) AS other_gender_retail_count,
+    count( distinct case when invoice_date IS NOT NULL AND delivery_note_date IS NULL and invoice_type = 'CI'  then invoice_sk else null end) AS invoiced_but_not_delivered_ibnd,
+    count( distinct case when delivery_note_date between '2025-10-01' and '2025-10-31' and invoice_type = 'CI'  then delivery_id else null end) AS delivery_count,
+    AVG(CASE WHEN invoice_date IS NOT NULL AND booking_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
+            THEN DATE_DIFF(invoice_date, booking_date, DAY) ELSE NULL END) AS avg_retail_to_booking_days,
+    AVG(CASE WHEN invoice_date IS NOT NULL AND enquiry_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
+            THEN DATE_DIFF(invoice_date, enquiry_date, DAY) ELSE NULL END) AS avg_retail_to_enquiry_days,
+    AVG(CASE WHEN invoice_date IS NOT NULL AND test_drive_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
+            THEN DATE_DIFF(invoice_date, test_drive_date, DAY) ELSE NULL END) AS avg_retail_to_testdrive_days,
+    AVG(CASE WHEN invoice_date IS NOT NULL AND billing_date IS NOT NULL and invoice_date between '2025-10-01' and '2025-10-31'
+            THEN DATE_DIFF(invoice_date, billing_date, DAY) ELSE NULL END) AS avg_retail_to_billing_days,
+    AVG(CASE WHEN invoice_date IS NOT NULL AND delivery_note_date IS NOT NULL and delivery_note_date between '2025-10-01' and '2025-10-31'
+            THEN DATE_DIFF(delivery_note_date, invoice_date, DAY) ELSE NULL END) AS avg_delivery_to_retail_days
+    FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
+    ON a.retail_modl_cd = modl.modl_cd
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
+    ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
+    ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
+    ```
 
   ---
   **Example 12: Booking and Open Order Count (NEW)**
   * **User Query:** "What is the total booking count, cancellation count, and the current open booking count for October 2025?"
   * **Thought Process:** The user needs aggregated counts from `EBRD_base`. I must use conditional counting for in-period bookings and cancellations. For the open booking count, I must use the complex logic provided (`BOOKING_DATE < start_date` AND `CANCEL_DATE/INVOICE_DATE >= start_date`) to ensure accurate inventory of pending conversions.
   * **Generated SQL:**
-      ```sql
-      SELECT 
-      count( distinct case when booking_date between '2025-10-01' and '2025-10-31' then booking_sk else null end) AS booking_count,
-      count( distinct case when booking_cancel_date between '2025-10-01' and '2025-10-31' then booking_sk else null end) AS booking_cancel_count,
-      count( distinct case when BOOKING_DATE < '2025-10-01' AND (CAST(BOOKING_CANCEL_DATE AS DATE) IS NULL OR  CAST(BOOKING_CANCEL_DATE AS string) = '' OR CAST(BOOKING_CANCEL_DATE AS DATE) >= '2025-10-01') AND (CAST(INVOICE_DATE AS DATE) IS NULL OR CAST(INVOICE_DATE AS string)= '' OR CAST(INVOICE_DATE AS DATE) >= '2025-10-01') AND BOOKING_DATE>= '2022-04-01' then booking_sk else null end) AS open_booking_count
-      FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
-      ON a.BOOKING_MODL_CD = modl.modl_cd
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
-      ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
-      LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
-      ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
-      ```
+    ```sql
+    SELECT 
+    count( distinct case when booking_date between '2025-10-01' and '2025-10-31' then booking_sk else null end) AS booking_count,
+    count( distinct case when booking_cancel_date between '2025-10-01' and '2025-10-31' then booking_sk else null end) AS booking_cancel_count,
+    count( distinct case when BOOKING_DATE < '2025-10-01' AND (CAST(BOOKING_CANCEL_DATE AS DATE) IS NULL OR  CAST(BOOKING_CANCEL_DATE AS string) = '' OR CAST(BOOKING_CANCEL_DATE AS DATE) >= '2025-10-01') AND (CAST(INVOICE_DATE AS DATE) IS NULL OR CAST(INVOICE_DATE AS string)= '' OR CAST(INVOICE_DATE AS DATE) >= '2025-10-01') AND BOOKING_DATE>= '2022-04-01' then booking_sk else null end) AS open_booking_count
+    FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.EBRD_base` a
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_dim_srv_mst_model_master` modl
+    ON a.BOOKING_MODL_CD = modl.modl_cd
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.ddp_ad_ai_final_dimension` adai
+    ON a.link_dealer = concat(adai.parnt_grop , adai.loctn_cd , adai.prodct_divsn)
+    LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
+    ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
+    ```
+
+    ---
+  **Example 13: Customer VOC Concerns (NEW)**
+  * **User Query:** "Give me the top 10 emerging service concerns reported by customers for the XUV7OO during PMS or Unscheduled Visits."
+  * **Thought Process:** The user needs counts of verbatim issues tied to a specific model ('xuv7oo') and categorized by service type (PMS, RC, RR). I must use the `customer_ro_verbatim` table and conditional aggregation based on the `voc_category` and `vehicle_model` filter.
+  * **Generated SQL:**
+    ```sql
+    SELECT
+      verbatim_group,
+      verbatim_code_desc,
+      COUNT(*) AS total_count,
+      SUM(CASE WHEN voc_category LIKE '%PMS%' THEN 1 ELSE 0 END) AS pms_count,
+      SUM(CASE WHEN voc_category LIKE '%RC%' THEN 1 ELSE 0 END) AS rc_count,
+      SUM(CASE WHEN voc_category LIKE '%RR%' THEN 1 ELSE 0 END) AS rr_count
+    FROM
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
+    WHERE
+      LOWER(vehicle_model) = 'xuv7oo'
+    GROUP BY
+      verbatim_group,
+      verbatim_code_desc
+    ORDER BY
+      total_count DESC
+    LIMIT
+      10
+    ```
+
+  ---
+  **Example 14: Top Local Labor Usage (NEW)**
+  * **User Query:** "Give top 10 most used Local Labour items for running repairs."
+  * **Thought Process:** The user wants top labor items specifically classified as 'Local Labor' (`labr_grop = 'LOC'`) and related to running repairs (`servc_type = 'RR'`). I will use the `Ro_voc_labr` table and group by labor description.
+  * **Generated SQL:**
+    ```sql
+    SELECT 
+      labr_desc, 
+      COUNT(*) AS count 
+    FROM 
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_labr`
+    WHERE 
+      LOWER(labr_grop) LIKE LOWER('%LOC%')
+      AND LOWER(servc_type) LIKE LOWER('%RR%')
+    GROUP BY 
+      1
+    ORDER BY 
+      count DESC
+    LIMIT 
+      10
+    ```
+
+  ---
+  **Example 15: Top Local Parts Consumption (NEW)**
+  * **User Query:** "Give top 10 most consumed Local Parts, excluding filters and washer components."
+  * **Thought Process:** The user needs top part usage from the `Ro_voc_part` table. I must filter for customer-billed parts (`part_bilbl_type = 'C'`), Running Repair service, and a local parts group (`verbatim_group = 'LOC'`). I must also exclude parts matching the negative list using `NOT LOWER(part_desc) LIKE...`.
+  * **Generated SQL:**
+    ```sql
+    SELECT 
+      part_numbr, 
+      part_desc, 
+      COUNT(*) AS part_count 
+    FROM 
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_part`
+    WHERE 
+      part_bilbl_type = 'C'
+      AND servc_type = 'RR'
+      AND verbatim_group = 'LOC'
+      AND NOT (
+        LOWER(part_desc) LIKE '%filter%' 
+        OR LOWER(part_desc) LIKE '%maxi%' 
+        OR LOWER(part_desc) LIKE '%cover%' 
+        OR LOWER(part_desc) LIKE '%washer%'
+      )
+    GROUP BY 
+      1, 2
+    ORDER BY 
+      part_count DESC
+    LIMIT 
+      10
+    ```
+
+  ---
+  **Example 16: Top Maxicare Labor Usage (NEW)**
+  * **User Query:** "Give top 10 most used Maxicare Labour operations."
+  * **Thought Process:** The user needs the most frequent labor operations specifically tagged with 'Maxicare'. I will query the `Ro_voc_labr` table and filter for the description containing the term 'Maxicare'.
+  * **Generated SQL:**
+    ```sql
+    SELECT 
+      labr_desc, 
+      COUNT(*) AS count 
+    FROM 
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_labr`
+    WHERE 
+      LOWER(labr_desc) LIKE LOWER('%Maxicare%')
+    GROUP BY 
+      1
+    ORDER BY 
+      count DESC
+    LIMIT 
+      10
+    ```
+
+  ---
+  **Example 17: Service Turnaround Time (TAT) by Category (NEW)**
+  * **User Query:** "Give me top 10 dealers who have highest service TAT for major service categories (PMS, RR, RC)."
+  * **Thought Process:** I need to calculate the average TAT in days using `TIMESTAMP_DIFF(bill_date, ro_date, DAY)` from the `customer_ro_verbatim` table, grouped by dealer and the repair order category (`ro_category`), and filtered for common service types.
+  * **Generated SQL:**
+    ```sql
+    SELECT 
+      dealer_name, 
+      ro_category, 
+      AVG(TIMESTAMP_DIFF(bill_date, ro_date, DAY)) AS avg_tat
+    FROM 
+      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
+    WHERE 
+      ro_category IN ('PMS', 'PMS+RR', 'PMS+RR+RC', 'PMS+RC', 'RC', 'RR', 'RC+RR')
+    GROUP BY 
+      1, 2
+    ORDER BY 
+      avg_tat DESC
+    LIMIT 
+      10
+    ```
+
+  ---
+  **Example 18: Vehicle Revisit Count (NEW)**
+  * **User Query:** "How many vehicles reported a revisit within 30 Days or 1000 Kilometers of their last service?"
+  * **Thought Process:** This requires complex lifecycle analysis involving window functions (`LAG`) and conditional flags to identify a revisit based on time or distance, as defined in the provided Revisit Logic SQL pattern. I must use the `customer_ro_verbatim` table as the base for this calculation.
+  * **Generated SQL:**
+    ```sql
+    WITH base AS (
+      SELECT
+        vin,
+        vehicle_model,
+        ro_unique_id,
+        CAST(ro_date AS DATE) AS ro_date,
+        CAST(bill_date AS DATE) AS bill_date,
+        SAFE_CAST(odometer_reading AS FLOAT64) AS odometer_reading,
+        verbatim_code,
+        ro_category,
+        dealer_code
+      FROM
+        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
+      WHERE
+        voc_category = 'RR'
+    ),
+    visit_level AS (
+      SELECT
+        vin,
+        vehicle_model,
+        ro_unique_id,
+        dealer_code,
+        ANY_VALUE(ro_date) AS ro_date,
+        ANY_VALUE(bill_date) AS bill_date,
+        ANY_VALUE(odometer_reading) AS odometer_reading,
+        ARRAY_AGG(DISTINCT verbatim_code) AS verbatim_codes,
+        ANY_VALUE(ro_category) AS ro_category
+      FROM base
+      GROUP BY vin, ro_unique_id, vehicle_model, dealer_code
+    ),
+    ordered AS (
+      SELECT
+        vin,
+        vehicle_model,
+        ro_unique_id,
+        dealer_code,
+        ro_date,
+        bill_date,
+        odometer_reading,
+        verbatim_codes,
+        ro_category,
+        LAG(ro_date) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_ro_date,
+        LAG(odometer_reading) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_odo,
+        LAG(verbatim_codes) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_verbatim_codes
+      FROM visit_level
+    ),
+    flags AS (
+      SELECT
+        a.*,
+        IF(
+          (DATE_DIFF(ro_date, prev_ro_date, DAY) <= 30)
+          OR (ABS(odometer_reading - prev_odo) <= 1000),
+          1, 0
+        ) AS is_revisit,
+        ARRAY(
+          SELECT v
+          FROM UNNEST(verbatim_codes) AS v
+          WHERE v IN UNNEST(prev_verbatim_codes)
+        ) AS rerepair_verbatims,
+        IF(
+          ARRAY_LENGTH(
+            ARRAY(
+              SELECT v
+              FROM UNNEST(verbatim_codes) AS v
+              WHERE v IN UNNEST(prev_verbatim_codes)
+            )
+          ) > 0,
+          1, 0
+        ) AS is_rerepair
+      FROM ordered a
+    ),
+    cleaned AS (
+      SELECT
+        *,
+        IFNULL(rerepair_verbatims, []) AS rerepair_verbatims_clean
+      FROM flags
+    ),
+    agg AS (
+      SELECT
+        vin,
+        dealer_code,
+        ARRAY_AGG(DISTINCT vehicle_model)[OFFSET(0)] AS vehicle_model,
+        COUNT(DISTINCT ro_unique_id) AS total_visits,
+        COUNTIF(is_revisit = 1) AS revisit_count
+      FROM cleaned
+      GROUP BY vin, dealer_code
+    )
+    SELECT
+      COUNTIF(revisit_count >= 1) AS total_vehicles_with_revisit
+    FROM agg
+    ```
