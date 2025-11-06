@@ -668,222 +668,144 @@ few_shot_examples: |
     LEFT JOIN `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.dim_zapo_matcategory` zapo
     ON modl.oem_modl_cd = zapo.matnr and modl.colr_cd = zapo.charg
     ```
-
-    ---
-  **Example 13: Customer VOC Concerns (NEW)**
-  * **User Query:** "Give me the top 10 emerging service concerns reported by customers for the XUV7OO during PMS or Unscheduled Visits."
-  * **Thought Process:** The user needs counts of verbatim issues tied to a specific model ('xuv7oo') and categorized by service type (PMS, RC, RR). I must use the `customer_ro_verbatim` table and conditional aggregation based on the `voc_category` and `vehicle_model` filter.
-  * **Generated SQL:**
-    ```sql
-    SELECT
-      verbatim_group,
-      verbatim_code_desc,
-      COUNT(*) AS total_count,
-      SUM(CASE WHEN voc_category LIKE '%PMS%' THEN 1 ELSE 0 END) AS pms_count,
-      SUM(CASE WHEN voc_category LIKE '%RC%' THEN 1 ELSE 0 END) AS rc_count,
-      SUM(CASE WHEN voc_category LIKE '%RR%' THEN 1 ELSE 0 END) AS rr_count
-    FROM
-      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
-    WHERE
-      LOWER(vehicle_model) = 'xuv7oo'
-    GROUP BY
-      verbatim_group,
-      verbatim_code_desc
-    ORDER BY
-      total_count DESC
-    LIMIT
-      10
-    ```
-
   ---
-  **Example 14: Top Local Labor Usage (NEW)**
-  * **User Query:** "Give top 10 most used Local Labour items for running repairs."
-  * **Thought Process:** The user wants top labor items specifically classified as 'Local Labor' (`labr_grop = 'LOC'`) and related to running repairs (`servc_type = 'RR'`). I will use the `Ro_voc_labr` table and group by labor description.
+  **Example 13: Top-N Concerns by Vehicle Model (NEW)**
+  * **User Query:** "Give me the top 10 emerging concerns reported by customer during PMS visit for XUV700"
+  * **Thought Process:** The user wants a top-N list of concerns for a specific vehicle model ('XUV700'). I need to filter the customer_ro_verbatim table. I will GROUP BY the concern verbatim_group and verbatim_code_desc. I also need to provide breakout counts for different voc_category types (PMS, RC, RR) using conditional aggregation with SUM(CASE WHEN...). Finally, I'll count all occurrences, ORDER BY total_count DESC, and LIMIT 10.
   * **Generated SQL:**
-    ```sql
-    SELECT 
-      labr_desc, 
-      COUNT(*) AS count 
-    FROM 
-      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_labr`
-    WHERE 
-      LOWER(labr_grop) LIKE LOWER('%LOC%')
-      AND LOWER(servc_type) LIKE LOWER('%RR%')
-    GROUP BY 
-      1
-    ORDER BY 
-      count DESC
-    LIMIT 
-      10
-    ```
-
+  ```sql
+  SELECT 
+  verbatim_group, 
+  verbatim_code_desc, 
+  COUNT(*) AS total_count, 
+  SUM(CASE WHEN voc_category LIKE '%PMS%' THEN 1 ELSE 0 END) AS pms_count, 
+  SUM(CASE WHEN voc_category LIKE '%RC%' THEN 1 ELSE 0 END) AS rc_count, 
+  SUM(CASE WHEN voc_category LIKE '%RR%' THEN 1 ELSE 0 END) AS rr_count 
+  FROM `mdp-adtd--prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim` 
+  WHERE LOWER(vehicle_model) = 'xuv700' 
+  GROUP BY 1, 2 
+  ORDER BY total_count DESC 
+  LIMIT 10
+  ```
   ---
-  **Example 15: Top Local Parts Consumption (NEW)**
-  * **User Query:** "Give top 10 most consumed Local Parts, excluding filters and washer components."
-  * **Thought Process:** The user needs top part usage from the `Ro_voc_part` table. I must filter for customer-billed parts (`part_bilbl_type = 'C'`), Running Repair service, and a local parts group (`verbatim_group = 'LOC'`). I must also exclude parts matching the negative list using `NOT LOWER(part_desc) LIKE...`.
+  **Example 14: Contextual Follow-Up (Consumed Parts for Concern) (NEW)**
+  * **User Query:** "Following up on that, give me the top 10 most consumed parts for the 'ENG' concern"
+  * **Thought Process:** This is a contextual follow-up to a previous query. The user wants the most consumed parts for a specific verbatim_group ('ENG'). I need to query the Ro_voc_part table. I will filter WHERE LOWER(vp.verbatim_group) LIKE LOWER('%ENG%'). I must also exclude common service items like filters, washers, and cleaners by adding a NOT (...) clause with OR conditions for each part description to avoid skewing the results. I will then GROUP BY the part number and description, COUNT the occurrences, and ORDER BY part_count DESC to get the top 10.
   * **Generated SQL:**
-    ```sql
-    SELECT 
-      part_numbr, 
-      part_desc, 
-      COUNT(*) AS part_count 
-    FROM 
-      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_part`
-    WHERE 
-      part_bilbl_type = 'C'
-      AND servc_type = 'RR'
-      AND verbatim_group = 'LOC'
-      AND NOT (
-        LOWER(part_desc) LIKE '%filter%' 
-        OR LOWER(part_desc) LIKE '%maxi%' 
-        OR LOWER(part_desc) LIKE '%cover%' 
-        OR LOWER(part_desc) LIKE '%washer%'
-      )
-    GROUP BY 
-      1, 2
-    ORDER BY 
-      part_count DESC
-    LIMIT 
-      10
-    ```
-
-  ---
-  **Example 16: Top Maxicare Labor Usage (NEW)**
-  * **User Query:** "Give top 10 most used Maxicare Labour operations."
-  * **Thought Process:** The user needs the most frequent labor operations specifically tagged with 'Maxicare'. I will query the `Ro_voc_labr` table and filter for the description containing the term 'Maxicare'.
+  ```sql
+  SELECT 
+  vp.verbatim_group, 
+  vp.part_numbr, 
+  vp.part_desc, 
+  COUNT(*) AS part_count 
+  FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_part` AS vp 
+  WHERE 
+  LOWER(vp.verbatim_group) LIKE LOWER('%ENG%') 
+  AND NOT (
+    LOWER(vp.part_desc) LIKE LOWER('%filter%') 
+    OR LOWER(vp.part_desc) LIKE LOWER('%washer%') 
+    OR LOWER(vp.part_desc) LIKE LOWER('%cleaner%')
+  ) 
+  GROUP BY vp.verbatim_group, vp.part_numbr, vp.part_desc 
+  ORDER BY part_count DESC 
+  LIMIT 10
+  ```
+  --- 
+  **Example 15: Ratio/Percentage Analytics (Dealer Labour) (NEW)**
+  * **User Query:** "Show me the utilization analytics for local labour codes for the top 5 dealers during 'RR' service"
+  * **Thought Process:** The user wants ratio analytics, not just counts. I need to find the top 5 dealers using 'LOC' (Local) labour codes for 'RR' service types. I'll query Ro_voc_labr. I must use conditional aggregation (COUNT(CASE WHEN labr_grop = 'LOC' ...) and COUNT(CASE WHEN labr_grop != 'LOC' ...)) to get counts for both local and other labour. I also need to calculate the loc_percentage and other_percentage by dividing these counts by the total COUNT(chas_numbr) and multiplying by 100. I will filter WHERE LOWER(servc_type) LIKE LOWER('%RR%'), GROUP BY dealer_name, ORDER BY loc_count DESC, and LIMIT 5.
   * **Generated SQL:**
-    ```sql
-    SELECT 
-      labr_desc, 
-      COUNT(*) AS count 
-    FROM 
-      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_labr`
-    WHERE 
-      LOWER(labr_desc) LIKE LOWER('%Maxicare%')
-    GROUP BY 
-      1
-    ORDER BY 
-      count DESC
-    LIMIT 
-      10
-    ```
-
-  ---
-  **Example 17: Service Turnaround Time (TAT) by Category (NEW)**
-  * **User Query:** "Give me top 10 dealers who have highest service TAT for major service categories (PMS, RR, RC)."
-  * **Thought Process:** I need to calculate the average TAT in days using `TIMESTAMP_DIFF(bill_date, ro_date, DAY)` from the `customer_ro_verbatim` table, grouped by dealer and the repair order category (`ro_category`), and filtered for common service types.
+  ```sql
+  SELECT 
+  dealer_name, 
+  COUNT(CASE WHEN labr_grop = 'LOC' THEN chas_numbr ELSE NULL END) AS loc_count, 
+  COUNT(CASE WHEN labr_grop != 'LOC' THEN chas_numbr ELSE NULL END) AS other_count, 
+  (COUNT(CASE WHEN labr_grop = 'LOC' THEN chas_numbr ELSE NULL END) / COUNT(chas_numbr)) * 100 AS loc_percentage, 
+  (COUNT(CASE WHEN labr_grop != 'LOC' THEN chas_numbr ELSE NULL END) / COUNT(chas_numbr)) * 100 AS other_percentage 
+  FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.Ro_voc_labr` 
+  WHERE LOWER(servc_type) LIKE LOWER('%RR%') 
+  GROUP BY 1 
+  ORDER BY loc_count DESC 
+  LIMIT 5
+  ```
+  --- 
+  **Example 16: Time-Based Calculation (Service TAT) (NEW)**
+  * **User Query:** "Give me the top 10 dealers with the highest average service TAT for 'RR' and 'RC+RR' service types"
+  * **Thought Process:** The user wants the average Turnaround Time (TAT) per dealer, filtered for specific service types. The business rule for TAT is the difference between bill_date and ro_date. I will query customer_ro_verbatim. I'll use the AVG(TIMESTAMP_DIFF(bill_date, ro_date, DAY)) function to calculate this average time in days. I will filter WHERE ro_category IN ('RR', 'RC+RR'), GROUP BY dealer_name, ro_category, and ORDER BY avg_tat DESC to find the highest, then LIMIT 10.
   * **Generated SQL:**
-    ```sql
-    SELECT 
-      dealer_name, 
-      ro_category, 
-      AVG(TIMESTAMP_DIFF(bill_date, ro_date, DAY)) AS avg_tat
-    FROM 
-      `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
-    WHERE 
-      ro_category IN ('PMS', 'PMS+RR', 'PMS+RR+RC', 'PMS+RC', 'RC', 'RR', 'RC+RR')
-    GROUP BY 
-      1, 2
-    ORDER BY 
-      avg_tat DESC
-    LIMIT 
-      10
-    ```
-
-  ---
-  **Example 18: Vehicle Revisit Count (NEW)**
-  * **User Query:** "How many vehicles reported a revisit within 30 Days or 1000 Kilometers of their last service?"
-  * **Thought Process:** This requires complex lifecycle analysis involving window functions (`LAG`) and conditional flags to identify a revisit based on time or distance, as defined in the provided Revisit Logic SQL pattern. I must use the `customer_ro_verbatim` table as the base for this calculation.
+  ```sql
+  SELECT 
+  dealer_name, 
+  ro_category, 
+  AVG(TIMESTAMP_DIFF(bill_date, ro_date, DAY)) AS avg_tat 
+  FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim` 
+  WHERE ro_category IN ('PMS', 'PMS+RR', 'PMS+RR+RC', 'PMS+RC', 'RC', 'RR', 'RC+RR')  
+  GROUP BY 1, 2 
+  ORDER BY avg_tat DESC 
+  LIMIT 10
+  ```
+  --- 
+  **Example 17: Sequential/Window Function (Revisit & Rerepair) (NEW)**
+  * **User Query:** "Identify vehicles that returned within 30 days or 1000 Kms for the same complaint"
+  * **Thought Process:** This is a complex sequential query to find "rerepairs". I must use multiple Common Table Expressions (CTEs).base: Get all 'RR' visit data for specific models.visit_level: Group by visit (ro_unique_id) and aggregate verbatim_code into an ARRAY.ordered: Use the LAG() window function partitioned by vin and ordered by ro_date to get the prev_ro_date, prev_odo, and prev_verbatim_codes for each visit.flags: Create is_revisit (checks DATE_DIFF... <= 30 OR ABS(odometer...-prev_odo) < 1000) and is_rerepair (checks if the verbatim_codes arrays overlap using ARRAY_LENGTH > 0).Final SELECT: Filter the results from flags to show only records WHERE is_revisit = 1 AND is_rerepair = 1.
   * **Generated SQL:**
-    ```sql
-    WITH base AS (
-      SELECT
-        vin,
-        vehicle_model,
-        ro_unique_id,
-        CAST(ro_date AS DATE) AS ro_date,
-        CAST(bill_date AS DATE) AS bill_date,
-        SAFE_CAST(odometer_reading AS FLOAT64) AS odometer_reading,
-        verbatim_code,
-        ro_category,
-        dealer_code
-      FROM
-        `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
-      WHERE
-        voc_category = 'RR'
-    ),
-    visit_level AS (
-      SELECT
-        vin,
-        vehicle_model,
-        ro_unique_id,
-        dealer_code,
-        ANY_VALUE(ro_date) AS ro_date,
-        ANY_VALUE(bill_date) AS bill_date,
-        ANY_VALUE(odometer_reading) AS odometer_reading,
-        ARRAY_AGG(DISTINCT verbatim_code) AS verbatim_codes,
-        ANY_VALUE(ro_category) AS ro_category
-      FROM base
-      GROUP BY vin, ro_unique_id, vehicle_model, dealer_code
-    ),
-    ordered AS (
-      SELECT
-        vin,
-        vehicle_model,
-        ro_unique_id,
-        dealer_code,
-        ro_date,
-        bill_date,
-        odometer_reading,
-        verbatim_codes,
-        ro_category,
-        LAG(ro_date) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_ro_date,
-        LAG(odometer_reading) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_odo,
-        LAG(verbatim_codes) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_verbatim_codes
-      FROM visit_level
-    ),
-    flags AS (
-      SELECT
-        a.*,
-        IF(
-          (DATE_DIFF(ro_date, prev_ro_date, DAY) <= 30)
-          OR (ABS(odometer_reading - prev_odo) <= 1000),
-          1, 0
-        ) AS is_revisit,
+  ```sql
+  WITH base AS (
+  SELECT
+    vin, vehicle_model, ro_unique_id,
+    CAST(ro_date AS DATE) AS ro_date,
+    CAST(bill_date AS DATE) AS bill_date,
+    SAFE_CAST(odometer_reading AS FLOAT64) AS odometer_reading,
+    verbatim_code, ro_category, dealer_code
+  FROM `mdp-ad-td-prd-476115.mdp_ad_td_bqd_common.customer_ro_verbatim`
+  WHERE voc_category = 'RR' AND vehicle_model IN ('MXV9', 'MBE6')
+  ),
+  visit_level AS (
+  SELECT
+    vin, vehicle_model, ro_unique_id, dealer_code,
+    ANY_VALUE(ro_date) AS ro_date,
+    ANY_VALUE(bill_date) AS bill_date,
+    ANY_VALUE(odometer_reading) AS odometer_reading,
+    ARRAY_AGG(DISTINCT verbatim_code) AS verbatim_codes,
+    ANY_VALUE(ro_category) AS ro_category
+  FROM base
+  GROUP BY vin, ro_unique_id, vehicle_model, dealer_code
+  ),
+  ordered AS (
+  SELECT
+    vin, vehicle_model, ro_unique_id, dealer_code, ro_date, bill_date,
+    odometer_reading, verbatim_codes, ro_category,
+    LAG(ro_date) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_ro_date,
+    LAG(odometer_reading) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_odo,
+    LAG(verbatim_codes) OVER(PARTITION BY vin ORDER BY ro_date) AS prev_verbatim_codes
+  FROM visit_level
+  ),
+  flags AS (
+  SELECT
+    a.*,
+    IF(
+      (DATE_DIFF(ro_date, prev_ro_date, DAY) <= 30)
+      OR (ABS(odometer_reading - prev_odo) < 1000),
+      1, 0
+    ) AS is_revisit,
+    IF(
+      ARRAY_LENGTH(
         ARRAY(
-          SELECT v
-          FROM UNNEST(verbatim_codes) AS v
+          SELECT v FROM UNNEST(verbatim_codes) AS v
           WHERE v IN UNNEST(prev_verbatim_codes)
-        ) AS rerepair_verbatims,
-        IF(
-          ARRAY_LENGTH(
-            ARRAY(
-              SELECT v
-              FROM UNNEST(verbatim_codes) AS v
-              WHERE v IN UNNEST(prev_verbatim_codes)
-            )
-          ) > 0,
-          1, 0
-        ) AS is_rerepair
-      FROM ordered a
-    ),
-    cleaned AS (
-      SELECT
-        *,
-        IFNULL(rerepair_verbatims, []) AS rerepair_verbatims_clean
-      FROM flags
-    ),
-    agg AS (
-      SELECT
-        vin,
-        dealer_code,
-        ARRAY_AGG(DISTINCT vehicle_model)[OFFSET(0)] AS vehicle_model,
-        COUNT(DISTINCT ro_unique_id) AS total_visits,
-        COUNTIF(is_revisit = 1) AS revisit_count
-      FROM cleaned
-      GROUP BY vin, dealer_code
-    )
-    SELECT
-      COUNTIF(revisit_count >= 1) AS total_vehicles_with_revisit
-    FROM agg
-    ```
+        )
+      ) > 0,
+      1, 0
+    ) AS is_rerepair
+  FROM ordered a
+  )
+  SELECT 
+  vin,
+  vehicle_model,
+  ro_unique_id AS current_ro_id,
+  ro_date AS current_ro_date,
+  prev_ro_date
+  FROM flags
+  WHERE is_revisit = 1 AND is_rerepair = 1
+  ```
+  ---
