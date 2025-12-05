@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-MODEL="gemini-2.5-pro-preview-03-25" # Identifier for the specific generative model to be used by the agent. (e.g., "gemini-2.5-pro-preview-03-25")
+MODEL="gemini-2.5-pro" # Identifier for the specific generative model to be used by the agent. (e.g., "gemini-2.5-pro-preview-03-25")
 # MODEL="gemini-2.5-flash-preview-04-17"
 PROJECT_ID="mdp-ad-td-prd-476115" # The Google Cloud Project ID that contains the BigQuery datasets and tables to be analyzed. (e.g., "my-gcp-project-123")
 LOCATION="asia-south1" # The geographical location of the BigQuery datasets and tables to be analyzed (e.g., "US", "asia-northeast3")
@@ -20,5 +20,5 @@ DATASET_NAME="mdp_ad_td_bqd_common" # The target BigQuery dataset name to be ana
 TABLE_NAMES=[] # Optional list of specific table names within DATASET_NAME. If empty, operations might apply to all tables in the dataset. (e.g., ["orders", "customers"] or [])
 # - For Mahindra - mdp-ad-td-prd-476115.mdp_ad_td_bqd_common_dataprofiling.data_profile Local - "agentic-data.mdp_ad_td_bqd_common_dataprofiling.data_profile
 DATA_PROFILES_TABLE_FULL_ID="mdp-ad-td-prd-476115.mdp_ad_td_bqd_common_dataprofiling.data_profile" # Optional: Full BigQuery table ID where data profiling results are stored. Set to None or an empty string if not used. (e.g., "my_project.profiling_dataset.all_profiles", None, "")
-LOGGING_PROJECT_ID="mdp-ad-td-prd-476115" # The Google Cloud Project ID where logs should be sent. If None or empty, logging to Google Cloud is disabled. (e.g., "my-logging-project-123", None, "")
-GCS_BUCKET_FOR_DEBUGGING = "mahindra-t2data-debug-artifacts" # Optional: Google Cloud Storage bucket name for storing debugging artifacts. If None or empty, this feature is disabled. (e.g., "my-debug-bucket", None, "")
+LOGGING_PROJECT_ID="srv-ad-nvoc-dev-445421" # The Google Cloud Project ID where logs should be sent. If None or empty, logging to Google Cloud is disabled. (e.g., "my-logging-project-123", None, "")
+GCS_BUCKET_FOR_DEBUGGING = "mahindra-t2data-debug-artifacts-nvoc-dev" # Optional: Google Cloud Storage bucket name for storing debugging artifacts. If None or empty, this feature is disabled. (e.g., "my-debug-bucket", None, "")
