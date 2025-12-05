@@ -98,7 +98,7 @@ echo "Cloud Build finished successfully."
 echo "Deploying image $MAIN_IMAGE_NAME to Cloud Run service $CLOUDRUN_SERVICE_NAME..."
 
 # Prepare environment variables string for Cloud Run
-ENV_VARS="APP_MODE=$APP_MODE_VAR,GOOGLE_GENAI_USE_VERTEXAI=0,GOOGLE_API_KEY=AIzaSyBOxFPWXJwN2Wtti6RV6Q-XTsa3ASXd6uk"
+ENV_VARS="APP_MODE=$APP_MODE_VAR,GOOGLE_GENAI_USE_VERTEXAI=0,GOOGLE_API_KEY=$GOOGLE_API_KEY"
 # Add secrets if needed, e.g. --set-secrets=GOOGLE_API_KEY=your-secret-name:latest
 
 gcloud run deploy "$CLOUDRUN_SERVICE_NAME" \
